@@ -43,17 +43,27 @@ file_1_lines = get_lines(file_1)
 file_2_lines = get_lines(file_2)
 
 
-def get_clean_text(filename):
-    #we now read in the whole text as a string into str_full and clean out any blank characters
-    str_full=read_whole(file_1)  #has the text in a human readable format
+def get_clean_text(str_full):
+    #we now read in the whole text as a string into str_full and clean out any blank characters    
     str_words=str_full.split() #removes any whitespaces and line feeds
     text_cleaned=" ".join(str_words) #this reinstates the whitespaces bewteen 
     #creates an array with all the words, no whitespaces or newlines    
     purged_text=text_cleaned.strip() #removes leading and trailing white spaces
     return purged_text
 
-file_1_clean=get_clean_text(file_1)
-file_2_clean=get_clean_text(file_2)
+def get_clean_text_file(filename):
+    #we now read in the whole text as a string into str_full and clean out any blank characters
+    str_full=read_whole(filename)  #has the text in a human readable format    
+    purged_text=get_clean_text(str_full) #removes leading and trailing white spaces
+    return purged_text
+
+
+
+file_1_clean=get_clean_text_file(file_1)
+file_2_clean=get_clean_text_file(file_2)
+
+file_set=[file_1_clean, file_2_clean]
+
 
 
 data = []
@@ -86,17 +96,19 @@ for x in data:
      t=t+1
      num_highlights=len(x.Highlight)     
      high_of_row=get_clean_text(x.Highlight)     
-     file_index=x.Part   
-     file_cleaned = file_1_clean if file_index == 1 else file_2_clean
+     file_index=np.int(x.Part)   
+     #file_cleaned = file_1_clean if file_index == 1 else file_2_clean
+     file_cleaned = ""
+     file_cleaned = file_set[file_index-1]
      index= file_cleaned.find(high_of_row)       
      if index == -1 :
-         print "Problems in row %d"%(t)
+         print "Problems in row %d , %s"%(t, high_of_row)
          failure_count=failure_count+1
+         
    
 print "We have %d highlights that were not located "%(failure_count)        
+print " \n"
 
-
-aoi = []
 
 line_tag=["start:", "end:"]
 mode_dict={"start": 0, "end": 1}
@@ -115,17 +127,20 @@ line_header_remove("start: 12 13 14","start")
 
 
 def read_aoi(input_file):    
+    # this takes the AOI configuration files and returns a dataframe with its contents
     try:
         fid_aoi = open(input_file, 'r')  
 
         aoi_header_line = fid_aoi.readline() 
         tot_aoi=int(aoi_header_line.rsplit()[0]) #total number of aoi
-        aoi_ID=[0]*tot_aoi
-        aoi_part=[0]*tot_aoi
-        aoi_name=[0]*tot_aoi
-        aoi_array=[0]*tot_aoi
+        aoi_ID=pd.Series( [0]*tot_aoi )
+        aoi_part=pd.Series( [0]*tot_aoi )
+        aoi_name=pd.Series( [0]*tot_aoi )       
+        aoi_start=pd.Series( [0]*tot_aoi )
+        aoi_end=pd.Series( [0]*tot_aoi )
+        aoi_ind_start=pd.Series( [0]*tot_aoi )
+        aoi_ind_end=pd.Series( [0]*tot_aoi )                
         
-        aoi_array[0]=["ID","part","name","start","end", "ind_start", "ind_end"]
         
         for t in range(tot_aoi):
             line_blank=fid_aoi.readline()   #ignores line
@@ -133,7 +148,7 @@ def read_aoi(input_file):
             line_aoi_head=fid_aoi.readline()
             print line_aoi_head
             aoi_head=line_aoi_head.rsplit()
-            print "part, ", aoi_head[0]
+            print "part, ", aoi_head[1]
             aoi_ID[t]=aoi_head[0]
             aoi_part[t]=aoi_head[1]
             aoi_name[t]=aoi_head[2]
@@ -145,7 +160,13 @@ def read_aoi(input_file):
             line_aoi_end=line_header_remove(line_aoi_end, "end")  #removes the end tag  
         fid_aoi.close()
      
- 
+        aoi_frame=pd.DataFrame({"ID": aoi_ID, 
+                                "part": aoi_part, 
+                                "name": aoi_name, 
+                                "start": aoi_start, 
+                                "end": aoi_end, 
+                                "ind_start": aoi_ind_start, 
+                                "ind_end": aoi_ind_end }) 
     
     
     
@@ -158,9 +179,15 @@ def read_aoi(input_file):
         print "Could not convert data ."
         raise
         quit()     
-    return aoi  
+    return aoi_frame  
 
 
-read_aoi("aoi_template.dat")
+aoi_frame=read_aoi("aoi_template.dat")
+tot_aoi=len(aoi_frame["ID"])
+print "We have a total of %d AOI \n"%(tot_aoi) 
+print aoi_frame["name"]
+
+
+
 
 

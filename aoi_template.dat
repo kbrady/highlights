@@ -1,14 +1,14 @@
-3
+3  # number of aoi's 
 
-1 2 nickname
+1 2 nickname_1          #aoi number    part   name_aoi   
 start: begin fragment
 end: end fragment
 
-2 2 nickname
+2 2 nickname_2
 start: begin fragment 2
 end: end fragment
 
-3 1 nickname
+3 1 nickname_3
 start: begin fragment 3
 end: end fragment
 
