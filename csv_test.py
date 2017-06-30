@@ -90,6 +90,9 @@ data_dict = {}
 for k in keys:
     data_dict[k] = [x.Highlight for x in data if to_key(x) == k]
 
+highl_index_beg=[0]*len(data)
+highl_index_end=[0]*len(data)
+
 t=0  
 failure_count=0  #stores the number of highlights that were not located
 for x in data:
@@ -104,7 +107,8 @@ for x in data:
      if index == -1 :
          print "Problems in row %d , %s"%(t, high_of_row)
          failure_count=failure_count+1
-         
+     highl_index_beg[t-1]=index
+     highl_index_end[t-1]=index+len(high_of_row)-1
    
 print "We have %d highlights that were not located "%(failure_count)        
 print " \n"
@@ -140,7 +144,7 @@ def read_aoi(input_file):
         aoi_end=pd.Series( [0]*tot_aoi )
         aoi_ind_start=pd.Series( [0]*tot_aoi )
         aoi_ind_end=pd.Series( [0]*tot_aoi )                
-        
+        aoi_hitcount=pd.Series( [0]*tot_aoi )
         
         for t in range(tot_aoi):
             line_blank=fid_aoi.readline()   #ignores line
@@ -158,6 +162,9 @@ def read_aoi(input_file):
         
             line_aoi_beg=line_header_remove(line_aoi_beg, "start")  #removes the start tag             
             line_aoi_end=line_header_remove(line_aoi_end, "end")  #removes the end tag  
+            aoi_start[t]=line_aoi_beg
+            aoi_end[t]=line_aoi_end
+            
         fid_aoi.close()
      
         aoi_frame=pd.DataFrame({"ID": aoi_ID, 
@@ -166,7 +173,8 @@ def read_aoi(input_file):
                                 "start": aoi_start, 
                                 "end": aoi_end, 
                                 "ind_start": aoi_ind_start, 
-                                "ind_end": aoi_ind_end }) 
+                                "ind_end": aoi_ind_end,
+                                "hit_count": aoi_hitcount }) 
     
     
     
@@ -181,13 +189,49 @@ def read_aoi(input_file):
         quit()     
     return aoi_frame  
 
+def unique_find(str_target,str_text):
+    ind_first=str_text.find(str_target)
+    ind_last=str_text.rfind(str_target)
+    match= (ind_first == ind_last) 
+    struct_find=[ind_first,match]
+    return struct_find
 
 aoi_frame=read_aoi("aoi_template.dat")
 tot_aoi=len(aoi_frame["ID"])
 print "We have a total of %d AOI \n"%(tot_aoi) 
 print aoi_frame["name"]
 
-
-
+for t in range(tot_aoi):
+    part_num=aoi_frame["part"][t]
+    file_cleaned= file_set[part_num-1]    
+    str_start=aoi_frame["start"][t]    
+    struct_find= unique_find(str_start,file_cleaned)
+    ind_start=struct_find[0]    
+    print ind_start
+    #ind_start=file_cleaned.find(str_start) 
+    if (struct_find[1] == False):
+        print "Error. The area of interest delimeing words are repeated in the text. Select a longer "
+        ind_start=-1
+    aoi_frame.loc[t,"ind_start"]=ind_start
+    str_end=aoi_frame["end"][t]    
+    ind_end=file_cleaned.find(str_end,ind_start)    
+    aoi_frame.loc[t,"ind_end"]=ind_end+len(str_end)-1 #this sets the index at the last letter of the AOI
+    
+    
+# count hits    
+t=0
+for x in data:
+     t=t+1
+     for k in range(tot_aoi):
+         beg_in_range=(highl_index_beg[t-1] >= aoi_frame.loc[k,"ind_start"]) and (highl_index_beg[t-1] <= aoi_frame.loc[k,"ind_end"])
+         end_in_range=(highl_index_end[t-1] >= aoi_frame.loc[k,"ind_start"]) and (highl_index_end[t-1] <= aoi_frame.loc[k,"ind_end"])
+         if beg_in_range or end_in_range:
+             aoi_frame.loc[k,"hit_count"]=aoi_frame.loc[k,"hit_count"]+1
+             print t, "is a hit", beg_in_range, end_in_range
+             
+        
+     
+         
+   
 
 
