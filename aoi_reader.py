@@ -132,7 +132,7 @@ def read_aoi(input_file):
         fid_aoi.close()
      
         aoi_frame=pd.DataFrame({"ID": aoi_ID, 
-                                "part": aoi_part, 
+                                "Part": aoi_part, 
                                 "name": aoi_name, 
                                 "start": aoi_start, 
                                 "end": aoi_end, 
@@ -165,7 +165,8 @@ print "We have a total of %d AOI \n"%(tot_aoi)
 print aoi_frame["name"]
 
 for t in range(tot_aoi):
-    part_num=aoi_frame["part"][t]
+    part_num=aoi_frame["Part"][t]
+    file_cleaned=" "
     file_cleaned= file_set[part_num-1]    
     str_start=aoi_frame["start"][t]    
     struct_find= unique_find(str_start,file_cleaned)
@@ -197,7 +198,7 @@ size_data=len(data_original)
 # Append column with AOI membership data
 #==============================================================================
 
-aoi_belong_series=pd.Series( [0]*size_data )
+aoi_belong_series=pd.Series( [ " " ]*size_data )
 data_original["aoi"]=aoi_belong_series
 
 
@@ -215,14 +216,14 @@ for t in range(size_data):
      num_highlights=len(data_original.loc[t,"Highlight"])     
      high_of_row=get_clean_text(data_original.loc[t,"Highlight"])     
      file_index=np.int(data_original.loc[t,"Part"])        
-     file_cleaned = ""
+     file_cleaned = "" #cleanses the string, for security
      file_cleaned = file_set[file_index-1]
      index= file_cleaned.find(high_of_row)       
      if index == -1 :
          print "Problems in row %d , %s"%(t, high_of_row)
          failure_count=failure_count+1
-     highl_index_beg[t-1]=index
-     highl_index_end[t-1]=index+len(high_of_row)-1
+     highl_index_beg[t]=index
+     highl_index_end[t]=index+len(high_of_row)-1
    
 print "We have %d highlights that were not located "%(failure_count)        
 print " \n"
@@ -238,7 +239,8 @@ t=0
 for t in range(size_data):     
      hit_list=[]
      for k in range(tot_aoi):
-        
+         if aoi_frame.loc[k,"Part"] != data_original.loc[t,"Part"] :
+             continue
          beg_in_range=(highl_index_beg[t] >= aoi_frame.loc[k,"ind_start"]) and (highl_index_beg[t] <= aoi_frame.loc[k,"ind_end"])
          end_in_range=(highl_index_end[t] >= aoi_frame.loc[k,"ind_start"]) and (highl_index_end[t] <= aoi_frame.loc[k,"ind_end"])
          if beg_in_range or end_in_range:
@@ -246,9 +248,10 @@ for t in range(size_data):
              print t, "is a hit", beg_in_range, end_in_range
              print "Highlight:",data_original.loc[t,"Highlight"]
              print "aoi: ",aoi_frame.loc[k,"text"]
+             print "Highlight index beg: ", highl_index_beg[t], "Highlight index end", highl_index_end[t]
              print " "
              hit_list=hit_list +[aoi_frame.loc[k, "ID"]]
-        
+             data_original.loc[t,"aoi"]= " ".join( str(s) for s in hit_list )
      
 
 
