@@ -26,6 +26,7 @@ file_2 = '/home/jorge/Documents/highlights/TIPs_middle_school_stimuli/content/wo
 highlight_info = '/home/jorge/Downloads/highlights_files/digital_highlights.csv'
 
 file_out = '/home/jorge/Downloads/highlights_files/output.csv'
+file_aoi_out = '/home/jorge/Downloads/highlights_files/aoi_stat.csv'
 
 input_files=[file_1, file_2]
 number_of_parts=len(input_files)
@@ -134,8 +135,8 @@ def read_aoi(input_file):
         
             line_aoi_beg=line_header_remove(line_aoi_beg, "start")  #removes the start tag             
             line_aoi_end=line_header_remove(line_aoi_end, "end")  #removes the end tag  
-            aoi_start[t]=line_aoi_beg
-            aoi_end[t]=line_aoi_end
+            aoi_start[t]=get_clean_text(line_aoi_beg)
+            aoi_end[t]=get_clean_text(line_aoi_end)
                     
             
         fid_aoi.close()
@@ -162,10 +163,13 @@ def read_aoi(input_file):
     return aoi_frame  
 
 def unique_find(str_target,str_text):
+    #this will search for a match and make output its uniquenss
     ind_first=str_text.find(str_target)
     ind_last=str_text.rfind(str_target)
-    match= (ind_first == ind_last) 
+    match= (ind_first == ind_last) # true if its a unique fragment
     struct_find=[ind_first,match]
+    if ind_first==-1 :
+        raise ValueError
     return struct_find
 
 aoi_frame=read_aoi("aoi_template.dat")
@@ -177,15 +181,28 @@ for t in range(tot_aoi):
     part_num=aoi_frame["Part"][t]
     file_cleaned=" "
     file_cleaned= file_set[part_num-1]    
-    str_start=aoi_frame["start"][t]    
-    struct_find= unique_find(str_start,file_cleaned)
+    str_start=aoi_frame["start"][t]  
+        
+    try:
+        struct_find= unique_find(str_start,file_cleaned) 
+    
+    except ValueError:
+        print "Could not locate AOI ", t+1 , " named ", aoi_frame.loc[t,"name"], " in part ", part_num
+        raise    
+    
     ind_start=struct_find[0]     
     if (struct_find[1] == False):
         print "Error. The  delimiting words are repeated in the text. Select a longer fragment "
         ind_start=-1
     aoi_frame.loc[t,"ind_start"]=ind_start
     str_end=aoi_frame["end"][t]    
-    ind_end=file_cleaned.find(str_end,ind_start)   
+    try:
+        ind_end=file_cleaned.index(str_end,ind_start)   
+    
+    except ValueError:
+        print "Could not locate AOI ", t+1 , " named ", aoi_frame.loc[t,"name"], " in part ", part_num
+        raise
+    
     aoi_frame.loc[t,"ind_end"]=ind_end+len(str_end)-1 #this sets the index at the last letter of the AOI
     aoi_frame.loc[t,"text"]=file_cleaned[aoi_frame.loc[t,"ind_start"]:aoi_frame.loc[t,"ind_end"]+1]
 
@@ -314,34 +331,37 @@ print " \n"
 #==============================================================================
 # Check each highlight and find to which AOI it belongs
 #==============================================================================
-tot_aoi=1
+
 t=0
-for t in range(size_data):     
-     hit_list=[""]*tot_aoi
-     for k in range(tot_aoi):
-         if (aoi_frame.loc[k,"Part"] != data_clean.loc[t,"Part"] ): #if the part number is not a match then continue
-             print "continue ", k, aoi_frame.loc[k,"Part"],  data_clean.loc[t,"Part"]
+for t in range(size_data):  
+     hit_list=[]
+     for k in range(tot_aoi):         
+         part_aoi= int(aoi_frame.loc[k,"Part"]) 
+         part_data=int(data_clean.loc[t,"Part"])
+         if part_aoi != part_data : 
+            # print "continue ", part_aoi,  part_data, t,k
              continue
-         print "pass"
+         
+             #print "pass"
+         #print "after"
          x1=highl_index_beg[t]
          x2=highl_index_end[t]
-         y1=aoi_frame.loc[k,"ind_start"]
-         y2=aoi_frame.loc[k,"ind_end"]
-         print x1, x2, y1, y2
+         y1=int(aoi_frame.loc[k,"ind_start"])
+         y2=int(aoi_frame.loc[k,"ind_end"])
+         
          no_overlap=(x2<y1 or x1 > y2)  # no overlap
          is_overlap=not no_overlap
-         #beg_in_range=(highl_index_beg[t] >= aoi_frame.loc[k,"ind_start"]) and (highl_index_beg[t] <= aoi_frame.loc[k,"ind_end"])
-         #end_in_range=(highl_index_end[t] >= aoi_frame.loc[k,"ind_start"]) and (highl_index_end[t] <= aoi_frame.loc[k,"ind_end"])
-        # if beg_in_range or end_in_range:
+         print x1, x2, y1, y2, "overlap =", is_overlap, " for highlight ", t
+
          if is_overlap==True:   
-             aoi_frame.loc[k,"hit_count"]=aoi_frame.loc[k,"hit_count"]+1
-            # print t, "is a hit", beg_in_range, end_in_range
-             print "Highlight:",data_clean.loc[t,"Highlight"]
-             print "aoi: ",aoi_frame.loc[k,"text"]
-             print "Highlight index beg: ", highl_index_beg[t], "Highlight index end", highl_index_end[t]
-             print " "
-             hit_list=hit_list +[aoi_frame.loc[k, "ID"]]
-             print hit_list
+             aoi_frame.loc[k,"hit_count"]=int(aoi_frame.loc[k,"hit_count"])+1
+            
+            # print "Highlight:",data_clean.loc[t,"Highlight"]
+            # print "aoi: ",aoi_frame.loc[k,"text"]
+            # print "Highlight index beg: ", highl_index_beg[t], "Highlight index end", highl_index_end[t]
+            # print " "
+             hit_list=hit_list +[aoi_frame.loc[k, "ID"]]             
+            # print hit_list
              data_clean.loc[t,"aoi"]= " ".join( str(s) for s in hit_list )
      
 #data_compact=data_clean.copy()
@@ -353,4 +373,6 @@ for t in range(size_data):
 
 data_clean.to_csv(file_out, columns=["Student ID", "Part" , "aoi", "Highlight"])
 
+
+aoi_frame.to_csv(file_aoi_out)
 
