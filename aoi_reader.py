@@ -314,18 +314,28 @@ print " \n"
 #==============================================================================
 # Check each highlight and find to which AOI it belongs
 #==============================================================================
-
+tot_aoi=1
 t=0
 for t in range(size_data):     
-     hit_list=[]
+     hit_list=[""]*tot_aoi
      for k in range(tot_aoi):
-         if aoi_frame.loc[k,"Part"] != data_clean.loc[t,"Part"] : #if the part number is not a match then continue
+         if (aoi_frame.loc[k,"Part"] != data_clean.loc[t,"Part"] ): #if the part number is not a match then continue
+             print "continue ", k, aoi_frame.loc[k,"Part"],  data_clean.loc[t,"Part"]
              continue
-         beg_in_range=(highl_index_beg[t] >= aoi_frame.loc[k,"ind_start"]) and (highl_index_beg[t] <= aoi_frame.loc[k,"ind_end"])
-         end_in_range=(highl_index_end[t] >= aoi_frame.loc[k,"ind_start"]) and (highl_index_end[t] <= aoi_frame.loc[k,"ind_end"])
-         if beg_in_range or end_in_range:
+         print "pass"
+         x1=highl_index_beg[t]
+         x2=highl_index_end[t]
+         y1=aoi_frame.loc[k,"ind_start"]
+         y2=aoi_frame.loc[k,"ind_end"]
+         print x1, x2, y1, y2
+         no_overlap=(x2<y1 or x1 > y2)  # no overlap
+         is_overlap=not no_overlap
+         #beg_in_range=(highl_index_beg[t] >= aoi_frame.loc[k,"ind_start"]) and (highl_index_beg[t] <= aoi_frame.loc[k,"ind_end"])
+         #end_in_range=(highl_index_end[t] >= aoi_frame.loc[k,"ind_start"]) and (highl_index_end[t] <= aoi_frame.loc[k,"ind_end"])
+        # if beg_in_range or end_in_range:
+         if is_overlap==True:   
              aoi_frame.loc[k,"hit_count"]=aoi_frame.loc[k,"hit_count"]+1
-             print t, "is a hit", beg_in_range, end_in_range
+            # print t, "is a hit", beg_in_range, end_in_range
              print "Highlight:",data_clean.loc[t,"Highlight"]
              print "aoi: ",aoi_frame.loc[k,"text"]
              print "Highlight index beg: ", highl_index_beg[t], "Highlight index end", highl_index_end[t]
@@ -334,9 +344,13 @@ for t in range(size_data):
              print hit_list
              data_clean.loc[t,"aoi"]= " ".join( str(s) for s in hit_list )
      
-data_compact=data_clean.copy()
-data_compact.drop(["level_0", "Note"],axis=1, inplace=True)
+#data_compact=data_clean.copy()
 
-data_compact.to_csv(file_out)
+#data_compact=pd.DataFrame( { "stud":  data_clean["Student ID"], 
+          #                  "high": data_clean["Highlight"] }, index=1 )
+
+#data_compact.drop(["level_0", "Note", "index"],axis=1, inplace=True)
+
+data_clean.to_csv(file_out, columns=["Student ID", "Part" , "aoi", "Highlight"])
 
 
