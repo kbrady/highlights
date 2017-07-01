@@ -6,9 +6,6 @@ Created on Fri Jun 30 12:50:40 2017
 @author: jorge
 """
 
-
-
-
 import csv
 from collections import namedtuple
 
@@ -25,9 +22,13 @@ import pandas as pd
 
 file_1 = '/home/jorge/Documents/highlights/TIPs_middle_school_stimuli/content/womens_suffrage_1.md'
 file_2 = '/home/jorge/Documents/highlights/TIPs_middle_school_stimuli/content/womens_suffrage_2.md'
-highlight_info = '/home/jorge/Downloads/highlights_files/highlights.csv'
+#highlight_info = '/home/jorge/Downloads/highlights_files/highlights.csv'
+highlight_info = '/home/jorge/Downloads/highlights_files/digital_highlights.csv'
 
+file_out = '/home/jorge/Downloads/highlights_files/output.csv'
 
+input_files=[file_1, file_2]
+number_of_parts=len(input_files)
 #==============================================================================
 # Process input files
 # Here we clean up the input files from any extra blank characters 
@@ -52,10 +53,6 @@ def read_whole(filename):
             raise
         return str
 
-file_1_lines = get_lines(file_1)
-file_2_lines = get_lines(file_2)
-
-
 def get_clean_text(str_full):
     #clean out any blank characters from input string    
     str_words=str_full.split() #removes any whitespaces and line feeds
@@ -70,11 +67,23 @@ def get_clean_text_file(filename):
     purged_text=get_clean_text(str_full) #removes leading and trailing white spaces
     return purged_text
 
-file_1_clean=get_clean_text_file(file_1)
-file_2_clean=get_clean_text_file(file_2)
+file_lines=[0]*number_of_parts
+file_set=[0]*number_of_parts
+t=0
+for t in range(number_of_parts):
+    print t, input_files[t]
+    file_lines[t]=get_lines(input_files[t])
+    file_set[t]=get_clean_text_file(input_files[t])
+#file_1_lines = get_lines(file_1)
+#file_2_lines = get_lines(file_2)
 
-file_set=[file_1_clean, file_2_clean]  #this string contains the enite text
-number_of_parts=len(file_set)                                            
+
+
+#file_1_clean=get_clean_text_file(file_1)
+#file_2_clean=get_clean_text_file(file_2)
+
+#file_set=[file_1_clean, file_2_clean]  #this string contains the enite text
+                                         
 
 #==============================================================================
 #  Read AOI (area of interest) file
@@ -190,16 +199,82 @@ data_original=pd.read_csv(highlight_info)
 size_data=len(data_original)
 
 #==============================================================================
-# Cleaning data of participants
+# Filtering data of participants
 #==============================================================================
 
+def check_int_range(inp_array, name_field , low_bound, up_bound):  
+    try:
+        #returns an elementwise range check for inp_array
+        array= np.array(inp_array[name_field] ,dtype=int)
+        check_low=(array >= low_bound)
+        check_high=(array <= up_bound)
+        res_array=np.logical_and(check_low  , check_high )
+    except ValueError:
+        print "Could not convert data ."         
+    return res_array
 
+
+def check_isnum(inp_array, name_field):
+    try:
+        #returns an elementwise range check for inp_array
+        array_isdig=np.array(inp_array[name_field].str.isdigit(), dtype=bool)          
+        res_array=array_isdig
+    
+    except IOError as e:
+        print "I/O error({0}): {1}".format(e.errno, e.strerror)
+        print "Error reading {0} ".format(input_file)
+        raise       
+    except ValueError:
+        print "Could not convert data ."   
+        raise
+    return res_array
+
+
+def check_valid(inp_array):
+    array=[False]*len(inp_array)
+    for t in range(len(inp_array)):
+        temp=inp_array[t]
+        
+        try:
+            res_conv=int(temp)
+            res_bool=True  #valid typecast
+            
+        except ValueError:
+            res_bool=False
+        array[t]=res_bool    
+            
+    return array
+
+
+data_clean=data_original.copy()
+
+array_isdigit=check_valid(data_clean["Student ID"])
+##detect all that do not have valid ID
+
+array_should_drop= np.logical_not(array_isdigit)  #schedule them for elimination
+data_clean.drop(data_clean[array_should_drop].index, inplace=True ) # drop the bad rows
+data_clean.reset_index(inplace=True)
+count_notnum=sum(array_should_drop)
+
+print "Found ", count_notnum, " entries with an invalid ID"
+
+array_inrange=check_int_range(data_clean,"Student ID", 1,sys.maxint)
+array_should_drop= np.logical_not(array_inrange)  #schedule them for elimination
+data_clean.drop(data_clean[array_should_drop].index, inplace=True ) # drop the bad rows
+data_clean.reset_index(inplace=True)
+count_notrange=sum(array_should_drop)
+
+print "Found ", count_notrange, " entries wth an ID out of range"
+
+
+
+size_data=len(data_clean)
 #==============================================================================
 # Append column with AOI membership data
 #==============================================================================
 
 aoi_belong_series=pd.Series( [ " " ]*size_data )
-data_original["aoi"]=aoi_belong_series
+data_clean["aoi"]=aoi_belong_series
 
 
 #==============================================================================
@@ -213,22 +288,27 @@ highl_index_end=[0]*size_data
 t=0  
 failure_count=0  #stores the number of highlights that were not located
 for t in range(size_data):     
-     num_highlights=len(data_original.loc[t,"Highlight"])     
-     high_of_row=get_clean_text(data_original.loc[t,"Highlight"])     
-     file_index=np.int(data_original.loc[t,"Part"])        
+     num_highlights=len(data_clean.loc[t,"Highlight"])     
+     high_of_row=get_clean_text(data_clean.loc[t,"Highlight"])
+     try:
+         usr_id=int(data_clean.loc[t,"Student ID"])          
+     
+     except ValueError:
+         print "Error at ",t,data_clean.loc[t,"Student ID"]
+         raise
+     
+     file_index=np.int(data_clean.loc[t,"Part"])        
      file_cleaned = "" #cleanses the string, for security
      file_cleaned = file_set[file_index-1]
      index= file_cleaned.find(high_of_row)       
      if index == -1 :
-         print "Problems in row %d , %s"%(t, high_of_row)
+         print "Problems in row %d , ID= %d , Highlight '%s' "%(t+1, usr_id ,high_of_row)
          failure_count=failure_count+1
      highl_index_beg[t]=index
      highl_index_end[t]=index+len(high_of_row)-1
    
 print "We have %d highlights that were not located "%(failure_count)        
 print " \n"
-
-
 
 
 #==============================================================================
@@ -239,20 +319,24 @@ t=0
 for t in range(size_data):     
      hit_list=[]
      for k in range(tot_aoi):
-         if aoi_frame.loc[k,"Part"] != data_original.loc[t,"Part"] :
+         if aoi_frame.loc[k,"Part"] != data_clean.loc[t,"Part"] : #if the part number is not a match then continue
              continue
          beg_in_range=(highl_index_beg[t] >= aoi_frame.loc[k,"ind_start"]) and (highl_index_beg[t] <= aoi_frame.loc[k,"ind_end"])
          end_in_range=(highl_index_end[t] >= aoi_frame.loc[k,"ind_start"]) and (highl_index_end[t] <= aoi_frame.loc[k,"ind_end"])
          if beg_in_range or end_in_range:
              aoi_frame.loc[k,"hit_count"]=aoi_frame.loc[k,"hit_count"]+1
              print t, "is a hit", beg_in_range, end_in_range
-             print "Highlight:",data_original.loc[t,"Highlight"]
+             print "Highlight:",data_clean.loc[t,"Highlight"]
              print "aoi: ",aoi_frame.loc[k,"text"]
              print "Highlight index beg: ", highl_index_beg[t], "Highlight index end", highl_index_end[t]
              print " "
              hit_list=hit_list +[aoi_frame.loc[k, "ID"]]
-             data_original.loc[t,"aoi"]= " ".join( str(s) for s in hit_list )
+             print hit_list
+             data_clean.loc[t,"aoi"]= " ".join( str(s) for s in hit_list )
      
+data_compact=data_clean.copy()
+data_compact.drop(["level_0", "Note"],axis=1, inplace=True)
 
+data_compact.to_csv(file_out)
 
 
