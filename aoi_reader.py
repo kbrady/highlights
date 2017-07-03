@@ -22,11 +22,13 @@ import pandas as pd
 
 file_1 = '/home/jorge/Documents/highlights/TIPs_middle_school_stimuli/content/womens_suffrage_1.md'
 file_2 = '/home/jorge/Documents/highlights/TIPs_middle_school_stimuli/content/womens_suffrage_2.md'
-#highlight_info = '/home/jorge/Downloads/highlights_files/highlights.csv'
-highlight_info = '/home/jorge/Downloads/highlights_files/digital_highlights.csv'
+highlight_info = '/home/jorge/Downloads/highlights_files/highlights.csv'
+#highlight_info = '/home/jorge/Downloads/highlights_files/digital_highlights.csv'
 
 file_out = '/home/jorge/Downloads/highlights_files/output.csv'
 file_aoi_out = '/home/jorge/Downloads/highlights_files/aoi_stat.csv'
+
+file_aoi_by_ID = '/home/jorge/Downloads/highlights_files/aoi_by_ID.csv'
 
 input_files=[file_1, file_2]
 number_of_parts=len(input_files)
@@ -331,7 +333,7 @@ print " \n"
 #==============================================================================
 # Check each highlight and find to which AOI it belongs
 #==============================================================================
-
+#tot_aoi=2
 t=0
 for t in range(size_data):  
      hit_list=[]
@@ -351,7 +353,7 @@ for t in range(size_data):
          
          no_overlap=(x2<y1 or x1 > y2)  # no overlap
          is_overlap=not no_overlap
-         print x1, x2, y1, y2, "overlap =", is_overlap, " for highlight ", t
+        # print x1, x2, y1, y2, "overlap =", is_overlap, " for highlight ", t
 
          if is_overlap==True:   
              aoi_frame.loc[k,"hit_count"]=int(aoi_frame.loc[k,"hit_count"])+1
@@ -364,15 +366,96 @@ for t in range(size_data):
             # print hit_list
              data_clean.loc[t,"aoi"]= " ".join( str(s) for s in hit_list )
      
-#data_compact=data_clean.copy()
-
-#data_compact=pd.DataFrame( { "stud":  data_clean["Student ID"], 
-          #                  "high": data_clean["Highlight"] }, index=1 )
-
-#data_compact.drop(["level_0", "Note", "index"],axis=1, inplace=True)
 
 data_clean.to_csv(file_out, columns=["Student ID", "Part" , "aoi", "Highlight"])
 
 
 aoi_frame.to_csv(file_aoi_out)
+
+#==============================================================================
+# Detect the type of condition
+#==============================================================================
+
+# Condition guide: A= paper part 1, then Website.part 2 
+
+def condition_detect( part_var, web_or_paper ):
+    if ((part_var==1) and (web_or_paper=="paper")):
+        cond_letter="A"
+    elif (part_var==1) and (web_or_paper=="website"):
+        cond_letter="B"
+    elif (part_var==2) and (web_or_paper=="paper"):
+        cond_letter="B"     
+    elif (part_var==2) and (web_or_paper=="website"):   
+        cond_letter="A"
+    else: 
+        cond_letter="unkown"        
+    return cond_letter
+
+valid_cond_let={"A", "B"}
+dict_web_or_paper={ "website": "website", "Web": "website" ,  "Paper": "paper" , "paper" : "paper"  }
+#==============================================================================
+#  Adding extra output matrix
+#==============================================================================
+
+ID_unique_array=list( set( np.array(data_clean["Student ID"], dtype=int) ) )
+ID_unique_array.sort()
+num_ID_unique= len(ID_unique_array)
+series_condition=[" "]*num_ID_unique
+
+aoi_results=pd.DataFrame( { "ID": ID_unique_array , "Condition": [" "]*num_ID_unique } )
+
+
+dict_ID_to_index={}
+pairs_ID_index=zip(ID_unique_array, range(0,num_ID_unique))
+for ID, index_ID in pairs_ID_index:
+    dict_ID_to_index[ID]=index_ID
+
+aoi_blank_series=pd.Series( [0 ]*num_ID_unique )
+
+parts_taken=pd.DataFrame( {"ID": ID_unique_array,  "Condition_letter": [" "]*num_ID_unique,  
+                         "website":  ["0"]*num_ID_unique, "paper": ["0"]*num_ID_unique,
+                         "tot_parts": ["0"]*num_ID_unique } ) 
+                        
+for t in range(0,tot_aoi):
+    col_label="AOI_%d"%(t+1)
+    aoi_results[col_label]=aoi_blank_series
+
+count_cond_inconsistent=0
+for t in range(size_data):
+    ID_var=int(data_clean.loc[t,"Student ID"])
+    index=dict_ID_to_index[ID_var]
+    
+    part_var=int(data_clean.loc[t,"Part"])
+    cond_input=data_clean.loc[t,"Condition"]
+    parts_taken.loc[index,dict_web_or_paper[ cond_input  ] ]= data_clean.loc[t, "Part"] 
+
+    parts_taken.loc[index,"tot_parts"]= int( int(parts_taken.loc[index,"website"]) > 0  ) + int( int(parts_taken.loc[index,"paper"]) > 0  )
+    cond_letter=condition_detect(part_var,cond_input) 
+    print cond_letter
+    parts_taken.loc[index,"Condition"]=cond_letter
+    
+
+    aoi_results.loc[index,"Condition"]=cond_letter
+    
+    hit_str=data_clean.loc[t,"aoi"]
+    hit_list=hit_str.split()
+    hit_len=len(hit_list)
+    for x in hit_list:
+        y=int(x)
+        if y>tot_aoi:
+            continue
+        col_name="AOI_%d"%( y )
+        aoi_results.loc[index,col_name]= int(aoi_results.loc[index,col_name])+1
+
+for t in range(num_ID_unique):
+    par_taken_var=parts_taken.loc[t,"tot_parts"] 
+    if par_taken_var < number_of_parts :
+        print "ID = ", parts_taken.loc[t,"ID"] ," is missing a part of the test."        
+        aoi_results.loc[t,"Condition"]= aoi_results.loc[t,"Condition"] + "  Incomplete"
+
+col_list= ["ID", "Condition"]+[ "AOI_%d"%(t) for t in range(1,tot_aoi+1) ] 
+aoi_results.to_csv(file_aoi_by_ID, header=True,columns= col_list )
+
+
+
 
