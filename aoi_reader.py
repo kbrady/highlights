@@ -20,15 +20,22 @@ import pandas as pd
 # Input files 
 #==============================================================================
 
+aoi_filename="aoi_template.dat"
 file_1 = '/home/jorge/Documents/highlights/TIPs_middle_school_stimuli/content/womens_suffrage_1.md'
 file_2 = '/home/jorge/Documents/highlights/TIPs_middle_school_stimuli/content/womens_suffrage_2.md'
 highlight_info = '/home/jorge/Downloads/highlights_files/highlights.csv'
 #highlight_info = '/home/jorge/Downloads/highlights_files/digital_highlights.csv'
 
+#==============================================================================
+# Output files
+#==============================================================================
+
 file_out = '/home/jorge/Downloads/highlights_files/output.csv'
 file_aoi_out = '/home/jorge/Downloads/highlights_files/aoi_stat.csv'
 
 file_aoi_by_ID = '/home/jorge/Downloads/highlights_files/aoi_by_ID.csv'
+
+file_aoi_text='/home/jorge/Downloads/highlights_files/text_aoi.dat'
 
 input_files=[file_1, file_2]
 number_of_parts=len(input_files)
@@ -166,6 +173,7 @@ def read_aoi(input_file):
 
 def unique_find(str_target,str_text):
     #this will search for a match and make output its uniquenss
+    #the code will search for the fragment from the left and from the right. If its unique the positions will be the same
     ind_first=str_text.find(str_target)
     ind_last=str_text.rfind(str_target)
     match= (ind_first == ind_last) # true if its a unique fragment
@@ -174,7 +182,8 @@ def unique_find(str_target,str_text):
         raise ValueError
     return struct_find
 
-aoi_frame=read_aoi("aoi_template.dat")
+
+aoi_frame=read_aoi(aoi_filename)
 tot_aoi=len(aoi_frame["ID"])
 print "We have a total of %d AOI \n"%(tot_aoi) 
 print aoi_frame["name"]
@@ -207,6 +216,31 @@ for t in range(tot_aoi):
     
     aoi_frame.loc[t,"ind_end"]=ind_end+len(str_end)-1 #this sets the index at the last letter of the AOI
     aoi_frame.loc[t,"text"]=file_cleaned[aoi_frame.loc[t,"ind_start"]:aoi_frame.loc[t,"ind_end"]+1]
+    
+
+#==============================================================================
+# Export AOIs to file
+#==============================================================================
+
+def write_aoi_text(filename):
+    # reads a file and reaturns its contents as a string
+        file_inp=filename
+        try:
+            fid_aoi_text=open(filename,'w')
+            for t in range(tot_aoi):
+                str_line=aoi_frame.loc[t,"text"]
+                fid_aoi_text.write("AOI_%d :\n \n "%(t+1))
+                fid_aoi_text.write(str_line)
+                fid_aoi_text.write("\n \n ")
+            fid_aoi_text.close()
+        
+        except IOError as e:
+            print "I/O error({0}): {1}".format(e.errno, e.strerror)
+            print "Error reading {0} ".format(file_inp)
+            raise
+        return 0
+
+write_aoi_text(file_aoi_text)
 
 
 
@@ -333,7 +367,8 @@ print " \n"
 #==============================================================================
 # Check each highlight and find to which AOI it belongs
 #==============================================================================
-#tot_aoi=2
+
+
 t=0
 for t in range(size_data):  
      hit_list=[]
