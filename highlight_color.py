@@ -6,13 +6,15 @@ Created on Fri Jun 30 12:50:40 2017
 @author: jorge
 """
 
-
+import pylab
 import sys
 import os
 import errno
 
 import numpy as np
 import pandas as pd
+
+print "Begin of color highlighting procedure"
 
 #==============================================================================
 # Input files 
@@ -91,24 +93,43 @@ for p in range(number_of_parts):
     file_lines[p]=get_lines(input_files[p])
     file_set[p]=get_clean_text_file(input_files[p])
 
-#==============================================================================
-#  Add colormap
-#==============================================================================
-
-size_colormap=64
-
-color_frame=pd.DataFrame({"red": np.linspace(0,255,size_colormap),
-                          "green":  np.linspace(0,0,size_colormap),
-                          "blue":  np.linspace(0,0,size_colormap) })
 
 #==============================================================================
-#  Produce highlighted text
+#  Get maximum word count
 #==============================================================================
 
 words_per_part=[0]*number_of_parts
 parts_array=np.array(data_words["Part"], dtype=int)
 counts_array=np.array(data_words["hit_count"], dtype=int)
 max_counts=max(counts_array)
+
+
+#==============================================================================
+#  Add colormap
+#==============================================================================
+
+
+
+size_colormap=max_counts
+
+
+red_array=np.array([0]*size_colormap, dtype=int)
+green_array=np.array([0]*size_colormap, dtype=int)
+blue_array=np.array([0]*size_colormap, dtype=int)
+
+python_cmap=pylab.cm.get_cmap("jet",size_colormap)
+
+for t in range(python_cmap.N):
+    red_array[t]=int(python_cmap(t)[0]*255)    
+    green_array[t]=int(python_cmap(t)[1]*255  ) 
+    blue_array[t]=int(python_cmap(t)[2]*255)   
+
+    
+ 
+#==============================================================================
+#  Produce highlighted text
+#==============================================================================
+
 
 
 
@@ -137,13 +158,12 @@ for p in range(number_of_parts):
                 count=data_words.loc[word_index,"hit_count"]
                 
                 if count >0:                    
-                    c=int(float(count)/float(max_counts)*(size_colormap-1))                    
-                   # print count, c
-                    red=color_frame.loc[c,"red"]
-                    blue=color_frame.loc[c,"blue"]
-                    green=color_frame.loc[c,"green"]
-                    word_new='<span style="background-color: #%02.0X%02.0X%02.0X " > '%(red,green,blue)+ word+ ' </span >'
-                    print word_new
+                    red=red_array[count-1]
+                    green=green_array[count-1]
+                    blue=blue_array[count-1]                      
+                   # print red, green, blue
+                    word_new='<span style="background-color: #%02.0X%02.0X%02.0X; color: #FFFFFF " > '%(red,green,blue)+ word+ ' </span >'
+                  #  print word_new
                 else:
                     word_new=word
                 word_array[t]=word_new
@@ -158,5 +178,5 @@ for p in range(number_of_parts):
         fid_highlight.write(s)
     fid_highlight.close()    
         
-    
+print "Finished"    
                 
