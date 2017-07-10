@@ -252,3 +252,7 @@ for t in range(size_data):
 words_frame.to_csv(file_words_csv, header=True )
 
 
+#==============================================================================
+#  Prepare the md outputs with highlights
+#==============================================================================
+
