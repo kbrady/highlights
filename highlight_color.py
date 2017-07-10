@@ -110,7 +110,7 @@ max_counts=max(counts_array)
 
 
 
-size_colormap=max_counts
+size_colormap = max_counts
 
 
 red_array=np.array([0]*size_colormap, dtype=int)
@@ -130,8 +130,16 @@ for t in range(python_cmap.N):
 #  Produce highlighted text
 #==============================================================================
 
-
-
+def get_color_key(size_colormap):
+    #returns a string with the color key
+    word="\n \n \n \n \n \n color key:  "
+    for t in range(size_colormap):
+        red=red_array[t]
+        green=green_array[t]
+        blue=blue_array[t]        
+        word_new='<span style="background-color: #%02.0X%02.0X%02.0X; color: #FFFFFF " > '%(red,green,blue)+ ' %d '%(t+1) + ' </span >'
+        word+=word_new
+    return word
 
 for p in range(number_of_parts):
     words_per_part[p]=sum(parts_array==p+1)
@@ -176,6 +184,12 @@ for p in range(number_of_parts):
     for l in range(num_lines):
         s=lines_out[l]+"\n"
         fid_highlight.write(s)
+        
+    #write color map key
+        
+        
+    s=get_color_key(size_colormap)
+    fid_highlight.write(s)    
     fid_highlight.close()    
         
 print "Finished"    
