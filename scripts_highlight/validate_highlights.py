@@ -72,6 +72,13 @@ file_out=get_name(line_list,"clean:")
 print "Output Name acquired ", file_out
 
 #==============================================================================
+# Words files
+#==============================================================================
+
+file_words='words.dat'
+file_words_csv='words.csv'
+
+#==============================================================================
 # Source files 
 #==============================================================================
 
@@ -208,6 +215,71 @@ print "Eliminated problem rows"
 data_clean.to_csv(file_out, header=True , index=False)
 
 print "Finished outputting cleaned highlights"
+
+
+
+#==============================================================================
+#  Make dataframe with words from file
+#==============================================================================
+total_words=[0]*number_of_parts
+str_words=file_set[0].split()
+index_local= np.array( range( len(str_words )))
+words_frame=pd.DataFrame({"words": str_words, 
+                        "Part": ["1"]*len(str_words),  
+                        "index_local": index_local,
+                        "hit_count": ["%d"%(0)]*len(str_words) }) 
+total_words[0]=len(str_words )
+
+    
+for t in range(1,number_of_parts):   
+    str_words=file_set[t].split()
+    index_local= np.array( range( len(str_words )))
+    words_temp=pd.DataFrame({"words": str_words, 
+                        "Part": ["%d"%(t+1)]*len(str_words), 
+                        "index_local": index_local,
+                        "hit_count": ["%d"%(0)]*len(str_words) }) 
+    words_frame=words_frame.append(words_temp, ignore_index=True)
+    total_words[t]=len(str_words )
+
+
+
+
+#==============================================================================
+#  Get the word counts and indices
+#==============================================================================
+size_data=len(data_clean)
+data_clean["word_index"]=["0"]*len(data_clean)
+data_clean["word_count"]=["0"]*len(data_clean)
+
+highl_index_beg=np.array(data_clean["ind_start"],dtype=int)
+highl_index_end=np.array(data_clean["ind_end"],dtype=int)
+
+
+for t in range(size_data):
+    str_high=data_clean.loc[t,"Text"]
+    data_clean.loc[t,"word_count"]=len(str_high.split())    
+    prev_string=file_set[ int(data_clean.loc[t, "Part"])-1  ][: highl_index_beg[t]  ]
+    #if the highlight is in the middle of a word we must shift it to the beginning of it
+    if (len(prev_string) >= 1) and (prev_string[-1] !=" "):
+        #looks for the nearest blank space and sets up the beginning on the character right after it 
+        ind_corrected=prev_string.rfind(" ")
+        str_adjusted=prev_string[: ind_corrected+1  ]
+       # print ind_corrected,  highl_index_beg[t], str_adjusted[-4:], prev_string[-4:]
+    else:
+        str_adjusted=prev_string    
+    word_index= len(str_adjusted.split())   
+    data_clean.loc[t,"word_index"]= word_index
+    part_number=int(data_clean.loc[t,"Part"])
+    global_index=sum(total_words[:part_number-1])+word_index
+   # print global_index, word_index
+    number_of_words=data_clean.loc[t,"word_count"]
+    #marks a hit for every time the word was highlighted
+    for k in range(number_of_words):
+        words_frame.loc[global_index+k,"hit_count"]=int( words_frame.loc[global_index+k,"hit_count"])+1  
+    
+
+words_frame.to_csv(file_words_csv, header=True )
+
 
 
 

@@ -16,5 +16,6 @@ python typo_corrector.py
 python validate_highlights.py
 python aoi_module.py
 python aoi_stats.py
+python color_marker.py
 
 exit 0
