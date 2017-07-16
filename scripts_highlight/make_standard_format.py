@@ -80,7 +80,7 @@ print "Output Name acquired ", file_output
 # Read the data from the participants file
 #==============================================================================
 
-data_original=pd.read_csv(file_input)
+data_original=pd.read_csv(file_input, na_filter=False, dtype=str)
 size_data=len(data_original)
 
 #==============================================================================
@@ -142,7 +142,7 @@ line=get_lines(file_condition)
 type_from_file=line[0].rsplit()[0]
 
 if ('type' in list(data_original)) == False :
-    data_original["type"]=type_from_file
+    data_original["type"]= [type_from_file]*len(data_original)
     print "Added condition '%s' from file"%(type_from_file)
 
 
@@ -151,18 +151,32 @@ if ('type' in list(data_original)) == False :
 #==============================================================================
 
 if ('annotate' in list(data_original)) == False :
-    data_original["annotate"]="0"
-    data_original["note"]=" "
+    data_original["annotate"]=["0"]*len(data_original)
+    data_original["note"]=[" "]*len(data_original)
     print "Added 'annotate' and 'note' column."
 
+data_original["annotate"]=np.array(data_original["annotate"], dtype=int)
 #==============================================================================
 #  Adding in columns with highlight
 #==============================================================================
 
 if ('highlight' in list(data_original)) == False :
-    data_original["highlight"]="1"
+    data_original["highlight"]=["1"]*len(data_original)
     print "Added 'highlight' column."
 
+data_original["highlight"]=np.array(data_original["highlight"], dtype=int)
+
+
+#==============================================================================
+#  Adding note in blank
+#==============================================================================
+if ('note' in list(data_original)) == False :
+    data_original["note"]=["1"]*len(data_original)
+    #initialize the empty strings to a blank value
+for t in range(len(data_original)):
+    s=data_original.loc[t,"note"]
+    if s=="" :        
+        data_original.loc[t,"note"]="  "
 
 
 #==============================================================================
@@ -189,7 +203,7 @@ def check_isnum(inp_array, name_field):
     
     except IOError as e:
         print "I/O error({0}): {1}".format(e.errno, e.strerror)
-        print "Error reading {0} ".format(input_file)
+       # print "Error reading {0} ".format(input_file)
         raise       
     except ValueError:
         print "Could not convert data ."   
@@ -236,32 +250,90 @@ array_inrange=check_int_range(data_valid_int,"Student ID", 1,sys.maxint)
 array_should_drop= np.logical_not(array_inrange)  #schedule them for elimination
 data_valid_ID=data_valid_int.drop(data_valid_int[array_should_drop].index ) # drop the bad rows
 
+data_valid_ID=data_valid_ID.reset_index(drop=True)
 count_notrange=sum(array_should_drop)
 
 print "Found ", count_notrange, " entries wth an ID out of range"
 
 size_data=len(data_valid_ID)
 
-data_clean=data_valid_ID
-print "Finished cleanup"
+
 
 
 #==============================================================================
 #  Validate part number
 #==============================================================================
 
-array_part_inrange=check_int_range(data_clean,"Part",1,2)
+array_part_inrange=check_int_range(data_valid_ID,"Part",1,2)
 if any(np.logical_not(array_part_inrange) ) == True :
     print "We have a Part number that is out of bounds."
-    print "Stopping"
-    raise
+    #print "Stopping"
+    
+
+
+array_should_drop= np.logical_not(array_part_inrange)  #schedule them for elimination
+sum_badparts=sum(array_should_drop)
+
+
+data_valid_part=data_valid_ID.drop(data_valid_ID[array_should_drop].index ) # drop the bad rows
+data_valid_part.reset_index(drop=True, inplace=True)  
+
+print "Found ", sum_badparts, " entries wth a bad part number"
+
+#==============================================================================
+# Validate annotation and highlight indicators
+#=============================================================================
+
+array_inrange_annot=check_int_range(data_valid_part,"annotate", 0,1)
+array_inrange_high=check_int_range(data_valid_part,"highlight", 0,1)
+array_inrange_annot_high=np.logical_and( array_inrange_annot , array_inrange_high )
+
+array_should_drop= np.logical_not(array_inrange_annot_high)  #schedule them for elimination
+data_valid_annot=data_valid_part.drop(data_valid_part[array_should_drop].index ) # drop the bad rows
+
+data_valid_annot.reset_index(drop=True, inplace=True)  
+count_not_annot=sum(array_should_drop)
+
+print "Found ", count_not_annot, " entries wth a bad flag for highlight or indicator"
+
+size_data=len(data_valid_annot)
+
+
+
+
+#==============================================================================
+#  Validate type of test
+#==============================================================================
+dict_web_or_paper={ "website": "website", "Web": "website" ,  "Paper": "paper" , "paper" : "paper"  }
+
+
+array_valid_type=np.array( [0]*size_data ,dtype=bool)
+for t in range(size_data):
+    type_test=data_valid_annot.loc[t,"type"]
+    val=(type_test in dict_web_or_paper)
+    if val== False:
+        array_valid_type[t]=False
+        
+    else:
+        array_valid_type[t]=True
+        data_valid_annot.loc[t,"type"]=dict_web_or_paper[type_test] #makes writting uniform
+        
+        
+array_should_drop= np.logical_not(array_valid_type)  #schedule them for elimination
+data_valid_type=data_valid_annot.drop(data_valid_annot[array_should_drop].index ) # drop the bad rows
+
+data_valid_type.reset_index(drop=True, inplace=True)        
+        
+data_clean=data_valid_type
+print "Finished cleanup"
+
 
 #==============================================================================
 # Output corrected csv
 #==============================================================================
 
-#col_list= ["ID", "Condition"]+[ "AOI_%d"%(t) for t in range(1,tot_aoi+1) ] 
-data_clean.to_csv(file_output, header=True )
+
+data_clean.to_csv(file_output, header=True, index=False )
 
 
 

@@ -186,7 +186,7 @@ def correction_used(str_correction, old):
 #==============================================================================
 # 
 #==============================================================================
-
+copy_input=input_str
 delim="'"
 skipped=0
 not_needed=0
@@ -201,15 +201,15 @@ for t in range(number_of_corrections):
     old=find_text(line,1)    
     correction=find_text(line,2)
     
-    used=correction_used(input_str,old)
+    used=correction_used(copy_input,old)
     if used==False:
         not_needed=not_needed+1
     print "Replacing %s%s%s for %s%s%s"%(delim,old,delim,  delim, correction, delim)    
     
-    input_str=input_str.replace(old, correction)
+    copy_input=copy_input.replace(old, correction)
 print "Skipped ", skipped, " corrections "
 print "Unneccesary corrections : ", not_needed    
-write_whole(file_output,input_str)    
+write_whole(file_output,copy_input)    
 
 
 
