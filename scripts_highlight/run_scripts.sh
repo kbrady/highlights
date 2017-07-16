@@ -12,5 +12,7 @@ then
 
 fi
 
+python typo_corrector.py
+
 
 exit 0
