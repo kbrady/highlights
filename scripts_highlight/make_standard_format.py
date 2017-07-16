@@ -180,6 +180,19 @@ for t in range(len(data_original)):
 
 
 #==============================================================================
+#  Adding in columns with index for beginning and end
+#==============================================================================
+
+if ('ind_start' in list(data_original)) == False :
+    data_original["ind_start"]=["0"]*len(data_original)
+    print "Added 'beg' column."
+
+if ('ind_end' in list(data_original)) == False :
+    data_original["ind_end"]=["0"]*len(data_original)
+    print "Added 'end' column."
+
+
+#==============================================================================
 # Routines for validating the ID
 #==============================================================================
 

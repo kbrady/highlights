@@ -13,6 +13,8 @@ then
 fi
 
 python typo_corrector.py
-
+python validate_highlights.py
+python aoi_module.py
+python aoi_stats.py
 
 exit 0
