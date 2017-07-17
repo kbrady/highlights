@@ -1,0 +1,58 @@
+12  # number of aoi's 
+
+1 1 q2partq3          #aoi number    part   name_aoi   
+start:  The 19th Amendment
+end: The 19th Amendment
+
+2 1 q3partq4
+start: That summer, the Declaration of Independence
+end:  giving women the right to vote in every state
+
+3 1 pre_q5
+start: At various times, women could
+end: rescinded that right three decades later
+
+4 1 q4_q6_
+start: convention in Seneca Falls
+end: other rights could be secured
+
+5 2 q6_q10
+start: Wyoming is First
+end: Wyoming is First
+
+6 2 q6_q10
+start: They staged demonstrations, engaged in civil disobedience
+end: Wyoming Territory gave women
+
+7 2 q11
+start: the vote, with the first permanent suffrage law
+end: their will on the male majority
+
+8 2 nonwards
+start: Mererl azoofile kuzzooroo
+end: wavefire redwolf hawkloon
+
+9 2 q7_q12
+start: In 1918, after much cajoling 
+end: changed his mind and backed the amendment
+
+10 2 q8_q13
+start: The last stand for anti-suffragists was in Tennessee
+end: He was wearing a red rose but
+
+11 2 q9_q14
+start: The political and social change
+end: only 35 of the necessary 38 states
+
+12 2 q10_q15
+start: In 1980, however, women surpassed men
+end:  substantial rise in the number
+
+
+
+
+
+
+
+
+

@@ -1,8 +1,7 @@
 original:	full_paper_coding_for_Jorge_1.csv
 ascii:		ascii.csv
 standard:	standard.csv
-data_validated:	validated.csv
-spell_checked:	spell_corrected.csv
+spell_corrected:	spell_corrected.csv
 clean:		clean.csv
 
 
