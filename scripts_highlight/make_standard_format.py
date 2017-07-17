@@ -15,7 +15,7 @@ import errno
 import numpy as np
 import pandas as pd
 
-
+import time
 
 #==============================================================================
 #  Line capture routine
@@ -75,6 +75,67 @@ print "Input Name acquired ", file_input
 file_output=get_name(line_list,"standard:")
 
 print "Output Name acquired ", file_output
+
+
+#==============================================================================
+# Error logs
+#==============================================================================
+
+file_error_log='error.log'
+file_error_ID='error_badID.csv'
+file_error_part='error_part.csv'
+file_error_an='error_part.csv'
+file_error_type='error_type_test.csv'
+
+def write_error(filename,frame,motive, location):
+    # reads a file and reaturns its contents as a string
+        file_inp=filename
+        try:
+            num_error_rows=len(frame)
+            if num_error_rows==0:
+                return 0  #no error to output
+            fid_error=open(filename,'a')    
+            s="Error found \n"
+            fid_error.write(s)
+            s="Motive: %s \n"%(motive)
+            fid_error.write(s)
+            s="Rows discarded: %d \n"%(num_error_rows)
+            fid_error.write(s)
+            s="A copy of deleted rows has been stored in: %s \n"%(location)
+            fid_error.write(s)
+            s=" \n \n"
+            fid_error.write(s)
+            fid_error.close()
+            
+            
+        except ValueError:
+            print "Error writing to %s"%(filename)
+        except IOError as e:
+            print "I/O error({0}): {1}".format(e.errno, e.strerror)
+            print "Error reading {0} ".format(file_inp)
+            raise
+        return 0
+
+def initialize_error(filename):
+    # reads a file and reaturns its contents as a string
+        file_inp=filename
+        try:
+            now = time.strftime('%c')
+            fid_error=open(filename,'w')           
+            s="Error log file created on %s \n \n"%(now)           
+            fid_error.write(s)
+            fid_error.close()
+            
+            
+        except ValueError:
+            print "Error writing to %s"%(filename)
+        except IOError as e:
+            print "I/O error({0}): {1}".format(e.errno, e.strerror)
+            print "Error reading {0} ".format(file_inp)
+            raise
+        return 0
+
+initialize_error(file_error_log)
 
 #==============================================================================
 # Read the data from the participants file
@@ -253,6 +314,16 @@ array_isdigit=check_valid(data_cop["Student ID"])
 ##detect all that do not have valid ID
 
 array_should_drop= np.logical_not(array_isdigit)  #schedule them for elimination
+
+#copy bad rows and report error
+motive=" ID is invalid "
+file_error_csv=file_error_ID
+df_bad=data_cop[array_should_drop]
+if len(df_bad)>0:
+    df_bad.to_csv(file_error_csv, header=True, index=True)
+    write_error(file_error_log,df_bad,motive,file_error_csv)
+
+
 data_valid_int=data_cop.drop(data_cop[array_should_drop].index ) # drop the bad rows
 
 count_notnum=sum(array_should_drop)
@@ -285,6 +356,17 @@ if any(np.logical_not(array_part_inrange) ) == True :
 
 
 array_should_drop= np.logical_not(array_part_inrange)  #schedule them for elimination
+
+#copy bad rows and report error
+motive=" Part number is not valid "
+file_error_csv=file_error_part
+df_bad=data_valid_ID[array_should_drop]
+if len(df_bad)>0:
+    df_bad.to_csv(file_error_csv, header=True, index=True)
+    write_error(file_error_log,df_bad,motive,file_error_csv)
+
+
+
 sum_badparts=sum(array_should_drop)
 
 
@@ -302,6 +384,17 @@ array_inrange_high=check_int_range(data_valid_part,"highlight", 0,1)
 array_inrange_annot_high=np.logical_and( array_inrange_annot , array_inrange_high )
 
 array_should_drop= np.logical_not(array_inrange_annot_high)  #schedule them for elimination
+
+#copy bad rows and report error
+motive=" Annotation or highlight flags are invalid "
+file_error_csv=file_error_an
+df_bad=data_valid_part[array_should_drop]
+if len(df_bad)>0:
+    df_bad.to_csv(file_error_csv, header=True, index=True)
+    write_error(file_error_log,df_bad,motive,file_error_csv)
+
+
+
 data_valid_annot=data_valid_part.drop(data_valid_part[array_should_drop].index ) # drop the bad rows
 
 data_valid_annot.reset_index(drop=True, inplace=True)  
@@ -333,6 +426,15 @@ for t in range(size_data):
         
         
 array_should_drop= np.logical_not(array_valid_type)  #schedule them for elimination
+
+#copy bad rows and report error
+motive=" Invalid type of test. Must be website or paper. "
+file_error_csv=file_error_type
+df_bad=data_valid_annot[array_should_drop]
+if len(df_bad)>0:
+    df_bad.to_csv(file_error_csv, header=True, index=True)
+    write_error(file_error_log,df_bad,motive,file_error_csv)
+
 data_valid_type=data_valid_annot.drop(data_valid_annot[array_should_drop].index ) # drop the bad rows
 
 data_valid_type.reset_index(drop=True, inplace=True)        

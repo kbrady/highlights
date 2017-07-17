@@ -72,6 +72,45 @@ file_out=get_name(line_list,"clean:")
 print "Output Name acquired ", file_out
 
 #==============================================================================
+# Error logs
+#==============================================================================
+
+file_error_log='error.log'
+file_error_csv='error_not_in_text.csv'
+
+
+def write_error(filename,frame,motive, location):
+    # reads a file and reaturns its contents as a string
+        file_inp=filename
+        try:
+            num_error_rows=len(frame)
+            if num_error_rows==0:
+                return 0  #no error to output
+            fid_error=open(filename,'a')      
+            s="Error found \n"
+            fid_error.write(s)
+            s="Motive: %s \n"%(motive)
+            fid_error.write(s)
+            s="Rows discarded: %d \n"%(num_error_rows)
+            fid_error.write(s)
+            s="A copy of deleted rows has been stored in: %s \n"%(location)
+            fid_error.write(s)
+            s=" \n \n"
+            fid_error.write(s)
+            fid_error.close()
+            
+            
+        except ValueError:
+            print "Error writing to %s"%(filename)
+        except IOError as e:
+            print "I/O error({0}): {1}".format(e.errno, e.strerror)
+            print "Error reading {0} ".format(file_inp)
+            raise
+        return 0
+
+
+
+#==============================================================================
 # Words files
 #==============================================================================
 
@@ -199,11 +238,20 @@ print "We have %d highlights that were not located "%(failure_count)
 print "Problematic rows will be dropped"     
 print " \n"
 
+
 #==============================================================================
 #  Getting rid of bad text selections 
 #==============================================================================
-
+motive=" the selected text could not be located within the source files."
 array_should_drop= np.logical_not(valid_highlights)  #schedule them for elimination
+
+#copy bad rows and report error
+df_bad=data_orig[array_should_drop]
+if len(df_bad)>0:
+    df_bad.to_csv(file_error_csv, header=True, index=True)
+    write_error(file_error_log,df_bad,motive,file_error_csv)
+
+
 data_clean=data_orig.drop(data_orig[array_should_drop].index ) # drop the bad rows
 data_clean.reset_index(drop=True, inplace=True)     
 
