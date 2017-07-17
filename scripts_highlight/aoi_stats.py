@@ -94,7 +94,7 @@ def write_error(filename,frame,motive, location):
             fid_error.write(s)
             s="Rows with problems: %d \n"%(num_error_rows)
             fid_error.write(s)
-            s="A copy of deleted rows has been stored in: %s \n"%(location)
+            s="A copy of problematic rows has been stored in: %s \n"%(location)
             fid_error.write(s)
             s=" \n \n"
             fid_error.write(s)
