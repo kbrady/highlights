@@ -72,6 +72,45 @@ file_aoi_out="aoi_stat_csv"
 file_aoi_by_ID = 'aoi_by_ID.csv'
 
 
+#==============================================================================
+# Error logs
+#==============================================================================
+
+file_error_log='error.log'
+file_error_csv='error_condition_error.csv'
+file_error_missing='error_missing_parts.dat'
+
+def write_error(filename,frame,motive, location):
+    # reads a file and reaturns its contents as a string
+        file_inp=filename
+        try:
+            num_error_rows=len(frame)
+            if num_error_rows==0:
+                return 0  #no error to output
+            fid_error=open(filename,'a')      
+            s="Error found \n"
+            fid_error.write(s)
+            s="Motive: %s \n"%(motive)
+            fid_error.write(s)
+            s="Rows with problems: %d \n"%(num_error_rows)
+            fid_error.write(s)
+            s="A copy of deleted rows has been stored in: %s \n"%(location)
+            fid_error.write(s)
+            s=" \n \n"
+            fid_error.write(s)
+            fid_error.close()
+            
+            
+        except ValueError:
+            print "Error writing to %s"%(filename)
+        except IOError as e:
+            print "I/O error({0}): {1}".format(e.errno, e.strerror)
+            print "Error reading {0} ".format(file_inp)
+            raise
+        return 0
+
+
+
 
 #==============================================================================
 # Get number of parts
@@ -195,7 +234,7 @@ aoi_blank_series=pd.Series( [0 ]*num_ID_unique )
 
 parts_taken=pd.DataFrame( {"ID": ID_unique_array,  "Condition_letter": [" "]*num_ID_unique,  
                          "website":  ["0"]*num_ID_unique, "paper": ["0"]*num_ID_unique,
-                         "tot_parts": ["0"]*num_ID_unique } ) 
+                         "tot_parts": ["0"]*num_ID_unique, "missing": ["  "]*num_ID_unique  } ) 
                         
 for t in range(0,tot_aoi):
     col_label="AOI_%d"%(t+1)
@@ -223,31 +262,61 @@ for t in range(size_data):
         col_name="AOI_%d"%( y )
         aoi_results.loc[index,col_name]= int(aoi_results.loc[index,col_name])+1
 
+num_badcondition=0
+
+array_good_condition=np.array([0]*num_ID_unique, dtype=bool)
+
 for t in range(num_ID_unique):
     par_taken_var=parts_taken.loc[t,"tot_parts"] 
     
     cond_letter=condition_detect(  int(parts_taken.loc[t,"website"]), "website" )
     parts_taken.loc[t,"Condition_letter"]=cond_letter
-    if par_taken_var < number_of_parts :
-        print "ID = ", parts_taken.loc[t,"ID"] ," is missing a part of the test." 
+    if par_taken_var < number_of_parts :        
+        array_good_condition[t]=False
+        #print "ID = ", parts_taken.loc[t,"ID"] ," is missing a part of the test." 
         web_part=int(parts_taken.loc[t,"website"])
         paper_part=int(parts_taken.loc[t,"paper"])
         if  web_part >0:
             cond_letter=condition_detect(web_part,"website")
-            #website taken
+            parts_taken.loc[t,"missing"]="paper"
+            #website taken, missing paper
         else:
             cond_letter=condition_detect(paper_part,"paper")
+            parts_taken.loc[t,"missing"]="website"
+            #paper taken, missing website
         aoi_results.loc[t,"Condition"]= cond_letter + "  Incomplete"
         parts_taken.loc[t,"Condition_letter"]= cond_letter + "  Incomplete"
+    else:
+        array_good_condition[t]=True
+
         
 col_list= ["ID", "Condition"]+[ "AOI_%d"%(t) for t in range(1,tot_aoi+1) ] 
 aoi_results.to_csv(file_aoi_by_ID, header=True,columns= col_list, index=False )
 
+#==============================================================================
+#  Error report
+#==============================================================================
 
- #   parts_taken.loc[index,"Condition"]=cond_letter
+
+motive="Entries with incomplete conditions detected"
+array_should_drop= np.logical_not(array_good_condition)  #schedule them for elimination
+num_bad_conditions=sum(array_should_drop)
+
+
+#copy bad rows and report error
+df_bad=parts_taken[array_should_drop]
+if len(df_bad)>0:
+    df_bad.to_csv(file_error_csv, header=True, index=True)
+    write_error(file_error_log,df_bad,motive,file_error_csv)
     
+size_bad=len(df_bad)
+fid_missing=open(file_error_missing, 'w')
 
-  #  aoi_results.loc[index,"Condition"]=cond_letter
+for t in range(size_bad):
+    s="ID: %s \t missing: %s \n"%(df_bad.loc[t,"ID"], df_bad.loc[t,"missing"])
+    fid_missing.write(s)
+fid_missing.close()
+
 
 
 
