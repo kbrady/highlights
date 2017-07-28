@@ -178,7 +178,7 @@ for t in range(size_data):
              data_clean.loc[t,"aoi"]= " ".join( str(s) for s in hit_list )
      
 print "Finished filling up the AOI data." 
-data_clean.to_csv(file_aoi_out, columns=["Student ID", "Part" , "aoi", "Text"], index=False)
+data_clean.to_csv(file_aoi_out, columns=["Participant", "Part" , "aoi", "Text"], index=False)
 
 
 aoi_frame.to_csv(file_aoi_out, index=False)
@@ -217,7 +217,7 @@ if ('Condition' in list(data_clean)) == False:
 #==============================================================================
 print "Output statistics by ID"
 
-ID_unique_array=list( set( np.array(data_clean["Student ID"], dtype=int) ) )
+ID_unique_array=list( set( np.array(data_clean["Participant"], dtype=int) ) )
 ID_unique_array.sort()
 num_ID_unique= len(ID_unique_array)
 series_condition=[" "]*num_ID_unique
@@ -242,7 +242,7 @@ for t in range(0,tot_aoi):
 
 count_cond_inconsistent=0
 for t in range(size_data):
-    ID_var=int(data_clean.loc[t,"Student ID"])
+    ID_var=int(data_clean.loc[t,"Participant"])
     index=dict_ID_to_index[ID_var]
     
     part_var=int(data_clean.loc[t,"Part"])

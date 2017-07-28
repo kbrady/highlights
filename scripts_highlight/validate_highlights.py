@@ -212,10 +212,10 @@ for t in range(size_data):
      #print "Checking row", t        
      high_of_row=get_clean_text(data_orig.loc[t,"Text"])
      try:
-         usr_id=int(data_orig.loc[t,"Student ID"])          
+         usr_id=int(data_orig.loc[t,"Participant"])          
      
      except ValueError:
-         print "Error at ",t,data_orig.loc[t,"Student ID"]
+         print "Error at ",t,data_orig.loc[t,"Participant"]
          valid_highlights[t]=False
          raise
      #print "Checking ID", usr_id

@@ -156,8 +156,8 @@ file_cols=list(data_original.columns.values)
 #==============================================================================
 
 if "Participant" in list(data_original):
-    print "Renaming %s to %s"%("Participant", "Student ID")
-    ddata_original=data_original.rename(columns={'Participant':'Student ID'})
+    print "Renaming %s to %s"%("Participant", "Participant")
+    ddata_original=data_original.rename(columns={'Participant':'Participant'})
 
 if ("Section" in list(data_original))==True:
     print "Renaming %s to %s"%("section", "Part")
@@ -170,7 +170,7 @@ file_cols=list(data_original.columns.values) #update column names
 #==============================================================================
 
 
-req_cols=["Student ID", "Part", "Text"]
+req_cols=["Participant", "Part", "Text"]
 
 try:
 
@@ -310,7 +310,7 @@ size_data=len(data_cop)
 
 data_cop=data_original.copy()
 
-array_isdigit=check_valid(data_cop["Student ID"])
+array_isdigit=check_valid(data_cop["Participant"])
 ##detect all that do not have valid ID
 
 array_should_drop= np.logical_not(array_isdigit)  #schedule them for elimination
@@ -330,7 +330,7 @@ count_notnum=sum(array_should_drop)
 
 print "Found ", count_notnum, " entries with an invalid ID"
 
-array_inrange=check_int_range(data_valid_int,"Student ID", 1,sys.maxint)
+array_inrange=check_int_range(data_valid_int,"Participant", 1,sys.maxint)
 array_should_drop= np.logical_not(array_inrange)  #schedule them for elimination
 data_valid_ID=data_valid_int.drop(data_valid_int[array_should_drop].index ) # drop the bad rows
 

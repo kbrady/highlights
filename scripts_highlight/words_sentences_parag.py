@@ -200,11 +200,46 @@ import sentence_extractor
 
 sent=sentence_extractor.frame_sentence
 
-frame_base=pd.read_csv(sentence_extractor.name_file_new[0])
+frame_sentence=pd.read_csv(sentence_extractor.name_file_new[0])
+frame_sentence["Part"]="%d"%(1)
 
 for t in range(1,number_of_parts):
     print "File is ", sentence_extractor.name_file_new[t]
-    frame_sentence=pd.read_csv(sentence_extractor.name_file_new[t])
+    frame_sentence_file=pd.read_csv(sentence_extractor.name_file_new[t])
+    frame_sentence_file["Part"]="%d"%(t+1)
+    frame_sentence=frame_sentence.append(frame_sentence_file, ignore_index=True)
+
+num_sentences=len(frame_sentence)
+
+#==============================================================================
+# Get the sentence index for each word
+#==============================================================================
+
+k=0
+offset=0
+for t in range(num_sentences):
+    sentence=frame_sentence.loc[t,"sentence_text"]
+    sentence_array=sentence.split()
+    len_sent=len(sentence_array)
+    words_array=list(words_frame["words"][offset:len_sent+offset])
+    #words_np=np.array(words_frame["words"][offset:len_sent+offset],dtype=str)
+    
+    match=(words_array==sentence_array)
+    if match==True:
+        words_frame.loc[offset:len_sent+offset,"in_sentence"]="%d"%(k)
+        k=k+1
+        offset=offset+len_sent
+    else:
+        print match, "Problem at sentence", t
+        print words_array
+        print sentence_array 
+        raise
+print "A total of %d sentences were allocated"%(k)
+
+#==============================================================================
+#  Get the paragraph index
+#==============================================================================
+
 
 
 
@@ -212,12 +247,10 @@ for t in range(1,number_of_parts):
 #  Export dataframe with words
 #==============================================================================
 
-
-
-
-
-
-
 words_frame.to_csv(file_words_csv, header=True )
+frame_sentence.to_csv(file_sentence_csv, header=True )
+
+
+
 
 
