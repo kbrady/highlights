@@ -442,6 +442,18 @@ data_valid_type.reset_index(drop=True, inplace=True)
 data_clean=data_valid_type
 print "Finished cleanup"
 
+#==============================================================================
+# Add column with indicator for beginning of user
+#==============================================================================
+data_clean["1 to start"]=np.array( [" "]*len(data_clean), dtype=str )
+
+old_entry=data_clean.loc[0,"Participant"]
+data_clean.loc[0,"1 to start"]=1
+for t in range(1, len( data_clean ) ):    
+    new_entry=data_clean.loc[t,"Participant"]
+    if new_entry!= old_entry:
+        data_clean.loc[t,"1 to start"]=1
+        old_entry=new_entry
 
 #==============================================================================
 # Output corrected csv

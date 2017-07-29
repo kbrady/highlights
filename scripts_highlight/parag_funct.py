@@ -282,7 +282,10 @@ def get_sentences(file_prim,file_sec):
     ##==============================================================================
     
     df_out=pd.DataFrame( {"local_index": range(num_matches), 
-                          "sentence_text": np.array(matches,dtype=str),
+                          "parag_text": np.array(matches,dtype=str),
+                          "beg_word_index": [" "]*num_matches,
+                          "end_word_index": [" "]*num_matches,
+                          "len_words": [" "]*num_matches,
                           "Part": [" "]*num_matches })
     
     df_out.to_csv(file_sentences, index=False)

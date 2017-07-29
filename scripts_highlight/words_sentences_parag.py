@@ -166,9 +166,6 @@ for t in range(number_of_parts):
 
 
 
-
-
-
 #==============================================================================
 #  Make dataframe with words from file
 #==============================================================================
@@ -188,7 +185,7 @@ for t in range(1,number_of_parts):
     index_local= np.array( range( len(str_words )))
     words_temp=pd.DataFrame({"words": str_words, 
                         "Part": ["%d"%(t+1)]*len(str_words), 
-                        "index_local": index_local, 
+                        "index_local": index_local,
                         "in_sentence":  [" "]*len(str_words),
                         "in_paragraph":  [" "]*len(str_words) }) 
     words_frame=words_frame.append(words_temp, ignore_index=True)
@@ -227,6 +224,9 @@ for t in range(num_sentences):
     match=(words_array==sentence_array)
     if match==True:
         words_frame.loc[offset:len_sent+offset,"in_sentence"]="%d"%(k)
+        frame_sentence.loc[t,"beg_word_index"]=offset
+        frame_sentence.loc[t,"end_word_index"]=offset+len_sent-1
+        frame_sentence.loc[t,"len_words"]=len_sent
         k=k+1
         offset=offset+len_sent
     else:
@@ -261,7 +261,7 @@ num_parag=len(frame_parag)
 k=0
 offset=0
 for t in range(num_parag):
-    parag=frame_parag.loc[t,"sentence_text"]
+    parag=frame_parag.loc[t,"parag_text"]
     parag_array=parag.split()
     len_parag=len(parag_array)
     words_array=list(words_frame["words"][offset:len_parag+offset])
@@ -270,6 +270,9 @@ for t in range(num_parag):
     match=(words_array==parag_array)
     if match==True:
         words_frame.loc[offset:len_parag+offset,"in_paragraph"]="%d"%(k)
+        frame_parag.loc[t,"beg_word_index"]=offset
+        frame_parag.loc[t,"end_word_index"]=offset+len_parag-1
+        frame_parag.loc[t,"len_words"]=len_parag
         k=k+1
         offset=offset+len_parag
     else:
@@ -284,9 +287,9 @@ print "A total of %d paragraphs were allocated"%(k)
 #  Export dataframe with words
 #==============================================================================
 
-words_frame.to_csv(file_words_csv, header=True )
-frame_sentence.to_csv(file_sentence_csv, header=True )
-
+words_frame.to_csv(file_words_csv, header=True, index=False )
+frame_sentence.to_csv(file_sentence_csv, header=True, index=False )
+frame_parag.to_csv(file_parag_csv, header=True, index=False )
 
 
 

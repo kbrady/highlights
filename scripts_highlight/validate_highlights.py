@@ -256,14 +256,6 @@ data_clean=data_orig.drop(data_orig[array_should_drop].index ) # drop the bad ro
 data_clean.reset_index(drop=True, inplace=True)     
 
 print "Eliminated problem rows"
-#==============================================================================
-# Save output
-#==============================================================================
-
-data_clean.to_csv(file_out, header=True , index=False)
-
-print "Finished outputting cleaned highlights"
-
 
 
 #==============================================================================
@@ -328,6 +320,14 @@ for t in range(size_data):
 
 words_frame.to_csv(file_words_csv, header=True )
 
+
+#==============================================================================
+# Save output
+#==============================================================================
+
+data_clean.to_csv(file_out, header=True , index=False)
+
+print "Finished outputting cleaned highlights"
 
 
 
