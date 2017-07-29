@@ -237,10 +237,47 @@ for t in range(num_sentences):
 print "A total of %d sentences were allocated"%(k)
 
 #==============================================================================
-#  Get the paragraph index
+#  Extract the paragraphs
 #==============================================================================
 
+import parag_extractor
 
+frame_parag=pd.read_csv(parag_extractor.name_file_new[0])
+frame_parag["Part"]="%d"%(1)
+
+for t in range(1,number_of_parts):
+    print "File is ", parag_extractor.name_file_new[t]
+    frame_parag_file=pd.read_csv(parag_extractor.name_file_new[t])
+    frame_parag_file["Part"]="%d"%(t+1)
+    frame_parag=frame_parag.append(frame_parag_file, ignore_index=True)
+
+num_parag=len(frame_parag)
+
+
+#==============================================================================
+#  Get the paragraph index for each word
+#==============================================================================
+
+k=0
+offset=0
+for t in range(num_parag):
+    parag=frame_parag.loc[t,"sentence_text"]
+    parag_array=parag.split()
+    len_parag=len(parag_array)
+    words_array=list(words_frame["words"][offset:len_parag+offset])
+    #words_np=np.array(words_frame["words"][offset:len_sent+offset],dtype=str)
+    
+    match=(words_array==parag_array)
+    if match==True:
+        words_frame.loc[offset:len_parag+offset,"in_paragraph"]="%d"%(k)
+        k=k+1
+        offset=offset+len_parag
+    else:
+        print match, "Problem at sentence", t
+        print words_array
+        print parag_array 
+        raise
+print "A total of %d paragraphs were allocated"%(k)
 
 
 #==============================================================================
