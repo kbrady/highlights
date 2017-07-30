@@ -71,6 +71,8 @@ file_out=get_name(line_list,"clean:")
 
 print "Output Name acquired ", file_out
 
+file_blank="blank.csv"
+
 #==============================================================================
 # Error logs
 #==============================================================================
@@ -192,7 +194,20 @@ data_orig=pd.read_csv(highlight_info, na_filter=False, dtype=str )
 size_data=len(data_orig)
 
 
-
+#==============================================================================
+# Export the blank entries
+#==============================================================================
+array_blank=np.array([False]*size_data ,dtype=bool)
+for t in range(size_data):     
+    line_temp=data_orig.loc[t,"Text"]
+    if (line_temp==""):
+        array_blank[t]=True
+        print "line %d = "%(t), line_temp
+        
+if sum(array_blank)>0:
+    df_blank=data_orig[array_blank]
+    df_blank.to_csv(file_blank)    
+    
 #==============================================================================
 # Validate highlights 
 #==============================================================================
@@ -320,6 +335,20 @@ for t in range(size_data):
 
 words_frame.to_csv(file_words_csv, header=True )
 
+
+
+#==============================================================================
+# Add column with indicator for beginning of user
+#==============================================================================
+data_clean["1 to start"]=np.array( [" "]*len(data_clean), dtype=str )
+
+old_entry=data_clean.loc[0,"Participant"]
+data_clean.loc[0,"1 to start"]=1
+for t in range(1, len( data_clean ) ):    
+    new_entry=data_clean.loc[t,"Participant"]
+    if new_entry!= old_entry:
+        data_clean.loc[t,"1 to start"]=1
+        old_entry=new_entry
 
 #==============================================================================
 # Save output
