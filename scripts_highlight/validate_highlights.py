@@ -194,19 +194,7 @@ data_orig=pd.read_csv(highlight_info, na_filter=False, dtype=str )
 size_data=len(data_orig)
 
 
-#==============================================================================
-# Export the blank entries
-#==============================================================================
-array_blank=np.array([False]*size_data ,dtype=bool)
-for t in range(size_data):     
-    line_temp=data_orig.loc[t,"Text"]
-    if (line_temp==""):
-        array_blank[t]=True
-        print "line %d = "%(t), line_temp
-        
-if sum(array_blank)>0:
-    df_blank=data_orig[array_blank]
-    df_blank.to_csv(file_blank)    
+
     
 #==============================================================================
 # Validate highlights 
@@ -220,6 +208,7 @@ array_highlight=np.array(data_orig["highlight"], dtype=int )
 num_highlights=sum(array_highlight)
 
 valid_highlights=np.array([0]*size_data, dtype=bool)
+array_blank=np.array([False]*size_data ,dtype=bool)
 
 t=0  
 failure_count=0  #stores the number of highlights that were not located
@@ -242,8 +231,13 @@ for t in range(size_data):
          print "Problems in row %d , ID= %d , Text '%s' "%(t+1, usr_id ,high_of_row)
          failure_count=failure_count+1
          valid_highlights[t]=False
+         
      else:
-         valid_highlights[t]=True    
+         valid_highlights[t]=True  
+         if len(high_of_row)==0: 
+             # the highlight is blank             
+             array_blank[t]=True
+             data_orig.loc[t,"blank?"]="%d"%(1)
      highl_index_beg[t]=index
      highl_index_end[t]=index+len(high_of_row)-1
      data_orig.loc[t,"ind_start"]=highl_index_beg[t]
@@ -252,6 +246,15 @@ for t in range(size_data):
 print "We have %d highlights that were not located "%(failure_count)   
 print "Problematic rows will be dropped"     
 print " \n"
+
+#==============================================================================
+# Export the blank entries
+#==============================================================================
+     
+
+df_blank=data_orig[array_blank]
+df_blank.to_csv(file_blank)    
+
 
 
 #==============================================================================

@@ -253,6 +253,33 @@ if ('ind_end' in list(data_original)) == False :
     print "Added 'end' column."
 
 
+
+#==============================================================================
+#  Adding in columns with belonging counts
+#==============================================================================
+
+
+
+dict_len_high={"word": 1, "phrase":   2, "sentence": 3,  "sentence + phrase": 4, "paragraph": 5, "multiple_paragraphs": 6 }
+dict_len_high_inv={1: "word", 2: "phrase", 3: "sentence",4:   "sentence + phrase", 5: "paragraph", 6: "multiple_paragraphs" }
+
+for name_of_col in dict_len_high:
+    if (name_of_col in list(data_original)) == False :
+        data_original[name_of_col]=np.array(["0"]*len(data_original), dtype=str)
+        print "Adding ", name_of_col  
+
+
+#==============================================================================
+#  Adding in columns for 
+#==============================================================================
+
+if ('blank?' in list(data_original)) == False :
+    data_original["blank?"]=["0"]*len(data_original)
+    print "Added blank? column."
+
+
+
+
 #==============================================================================
 # Routines for validating the ID
 #==============================================================================

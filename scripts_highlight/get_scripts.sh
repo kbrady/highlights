@@ -11,6 +11,7 @@ cp /home/jorge/spyder_work/words_sentences_parag.py ./
 cp /home/jorge/spyder_work/parag_extractor.py ./
 cp /home/jorge/spyder_work/parag_funct.py ./
 cp /home/jorge/spyder_work/len_highlight_vars.py ./
+cp /home/jorge/spyder_work/run_highlights.py ./
 
 
 

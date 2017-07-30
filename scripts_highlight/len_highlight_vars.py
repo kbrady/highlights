@@ -19,6 +19,7 @@ file_parag_csv='parag_list.csv'
 
 file_orig='clean.csv'
 
+file_out='data_augmented.csv'
 
 #==============================================================================
 #  Read file with "dictionary" or words, sentences, paragraphs and cleaned user data
@@ -27,19 +28,20 @@ file_orig='clean.csv'
 frame_sentence=pd.read_csv(file_sentence_csv)
 frame_parag=pd.read_csv(file_parag_csv)
 frame_words=pd.read_csv(file_words_csv)
-frame_orig=pd.read_csv(file_orig)
+frame_orig=pd.read_csv(file_orig, na_filter=False, dtype=str)
 
 
 #==============================================================================
 #  Make columns ofr binary values 
 #==============================================================================
+frame_copy=frame_orig.copy()
 
-dict_cols={"word": 1, "phrase": 2, "sentence": 3, "sentence+phrase": 4, "paragraph": 5, "multiple_paragraphs": 6 }
-dict_inv={1: "word", 2: "phrase", 3: "sentence",4: "sentence+phrase", 5: "paragraph", 6:"multiple_paragraphs" }
+dict_cols={"word": 1, "phrase":   2, "sentence": 3,  "sentence+phrase": 4, "paragraph": 5, "multiple_paragraphs": 6 }
+dict_inv={1: "word", 2: "phrase", 3: "sentence",4:   "sentence+phrase", 5: "paragraph", 6: "multiple_paragraphs" }
 frame_orig["word"]=np.array( [0]*len(frame_orig), dtype=int )
 frame_orig["phrase"]=np.array( [0]*len(frame_orig), dtype=int )
 frame_orig["sentence"]=np.array( [0]*len(frame_orig), dtype=int )
-frame_orig["sentence+phrase"]=np.array( [0]*len(frame_orig), dtype=int )
+frame_orig["sentence + phrase"]=np.array( [0]*len(frame_orig), dtype=int )
 frame_orig["paragraph"]=np.array( [0]*len(frame_orig), dtype=int )
 frame_orig["multiple_paragraphs"]=np.array( [0]*len(frame_orig), dtype=int )
 
@@ -63,8 +65,10 @@ num_entries=len(frame_orig)
 #==============================================================================
 
 for t in range(num_entries):
-    word_index=frame_orig.loc[t,"word_index"]
-    word_count=frame_orig.loc[t,"word_count"] 
+    word_index=int(frame_orig.loc[t,"word_index"])
+    word_count=int(frame_orig.loc[t,"word_count"] )
+    if word_count==0:
+        continue
     sent_first_word=frame_words.loc[word_index,"in_sentence"]
     array_sentence_belong=np.array(frame_words["in_sentence"][word_index:word_index+word_count], dtype=int)
     min_sent=min(array_sentence_belong)
@@ -98,7 +102,7 @@ for t in range(num_entries):
                 frame_orig.loc[t,"paragraph"]=1
             elif (word_par > word_count):
                 #not whole paragraph
-                frame_orig.loc[t,"sentence+phrase"]=1
+                frame_orig.loc[t,"sentence + phrase"]=1
         elif (min_par<max_par):    
         # multi paragraph
             frame_orig.loc[t,"multiple_paragraphs"]=1
@@ -112,6 +116,19 @@ for t in range(num_entries):
 print "Single word count= ", sum(np.array(frame_orig["word"]))        
 print "Phrase count= ", sum(np.array(frame_orig["phrase"]))   
 print "Sentence count= ", sum(np.array(frame_orig["sentence"]))         
-print "Sentence+phrase count= ", sum(np.array(frame_orig["sentence+phrase"]))  
+print "Sentence + phrase count= ", sum(np.array(frame_orig["sentence + phrase"]))  
 print "Paragraph= ", sum(np.array(frame_orig["paragraph"]))  
-print "Multiple paragraphs= ", sum(np.array(frame_orig["multiple_paragraphs"]))           
+print "Multiple paragraphs= ", sum(np.array(frame_orig["multiple_paragraphs"]))        
+
+#==============================================================================
+# Output block
+#==============================================================================
+
+frame_orig.to_csv(file_out, index=False)
+
+
+
+
+
+
+   
