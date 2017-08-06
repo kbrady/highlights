@@ -89,8 +89,10 @@ file_error_ID='error_badID.csv'
 file_error_part='error_part.csv'
 file_error_an='error_part.csv'
 file_error_type='error_type_test.csv'
+file_error_spelling='error_spelling.csv'
 
-set_error_names=[file_error_ID, file_error_part, file_error_an, file_error_type ]
+
+set_error_names=[file_error_ID, file_error_part, file_error_an, file_error_type, file_error_spelling ]
 
 def write_error(filename,frame,motive, location):
     # reads a file and reaturns its contents as a string

@@ -16,6 +16,82 @@ import errno
 import numpy as np
 import pandas as pd
 
+import time
+#==============================================================================
+# Error log for typos
+#==============================================================================
+
+#general log file
+file_error_log='error.log'
+
+file_error_spelling='error_spelling.csv'
+file_spelling_log='error_spelling.dat'
+
+def write_error_text(filename, motive, location):    
+        file_inp=filename
+        try:
+            fid_error=open(filename,'a')    
+            s="Applying correction # %d  \n"%(location+1)
+            fid_error.write(s)
+            s="Action: %s \n"%(motive)
+            fid_error.write(s)
+            s=" \n \n"
+            fid_error.write(s)
+            fid_error.close()
+                        
+        except ValueError:
+            print "Error writing to %s"%(filename)
+        except IOError as e:
+            print "I/O error({0}): {1}".format(e.errno, e.strerror)
+            print "Error reading {0} ".format(file_inp)
+            raise
+        return 0
+
+def initialize_error(filename):    
+        file_inp=filename
+        try:
+            now = time.strftime('%c')
+            fid_error=open(filename,'w')           
+            s=""          
+            fid_error.write(s)
+            fid_error.close()
+            
+            
+        except ValueError:
+            print "Error writing to %s"%(filename)
+        except IOError as e:
+            print "I/O error({0}): {1}".format(e.errno, e.strerror)
+            print "Error reading {0} ".format(file_inp)
+            raise
+        return 0
+
+
+def write_error(filename,motive, location):
+    # reads a file and reaturns its contents as a string
+        file_inp=filename
+        try:
+
+            fid_error=open(filename,'a')    
+            s="Error found \n"
+            fid_error.write(s)
+            s="Motive: %s \n"%(motive)
+            fid_error.write(s)
+            s=" \n \n"
+            fid_error.write(s)
+            fid_error.close()
+            
+            
+        except ValueError:
+            print "Error writing to %s"%(filename)
+        except IOError as e:
+            print "I/O error({0}): {1}".format(e.errno, e.strerror)
+            print "Error reading {0} ".format(file_inp)
+            raise
+        return 0
+
+
+initialize_error(file_spelling_log)
+
 
 
 #==============================================================================
@@ -190,6 +266,7 @@ copy_input=input_str
 delim="'"
 skipped=0
 not_needed=0
+num_corrected=0
 for t in range(number_of_corrections):
     
     line=correction_list[t].split(delim)
@@ -204,12 +281,28 @@ for t in range(number_of_corrections):
     used=correction_used(copy_input,old)
     if used==False:
         not_needed=not_needed+1
-    print "Replacing %s%s%s for %s%s%s"%(delim,old,delim,  delim, correction, delim)    
+        action_str="No action because the correction is not neded."
+        write_error_text(file_spelling_log, action_str,t)
+    else:     
+        print "Replacing %s%s%s for %s%s%s"%(delim,old,delim,  delim, correction, delim)    
+        num_corrected=num_corrected+1
+        copy_input=copy_input.replace(old, correction)
+        action_str="Replaced %s%s%s for %s%s%s"%(delim,old,delim,  delim, correction, delim)  
+        write_error_text(file_spelling_log, action_str,t)
     
-    copy_input=copy_input.replace(old, correction)
-print "Skipped ", skipped, " corrections "
-print "Unneccesary corrections : ", not_needed    
+    
+print "Skipped ", skipped, " corrections that could not be read from file"
+print "Unneccesary corrections : ", not_needed  
+print "Total corrections = ", num_corrected
+  
 write_whole(file_output,copy_input)    
+if num_corrected > 0:
+    motive="A total of %d typos were corrected. See %s"%(num_corrected, file_spelling_log)
+    write_error(file_error_log,motive,0)
+
+
+
+
 
 
 
