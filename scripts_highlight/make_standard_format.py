@@ -81,11 +81,16 @@ print "Output Name acquired ", file_output
 # Error logs
 #==============================================================================
 
+#general log file
 file_error_log='error.log'
+
+#specific error log files
 file_error_ID='error_badID.csv'
 file_error_part='error_part.csv'
 file_error_an='error_part.csv'
 file_error_type='error_type_test.csv'
+
+set_error_names=[file_error_ID, file_error_part, file_error_an, file_error_type ]
 
 def write_error(filename,frame,motive, location):
     # reads a file and reaturns its contents as a string
@@ -135,7 +140,29 @@ def initialize_error(filename):
             raise
         return 0
 
+def initialize_blank(filename):
+    # reads a file and reaturns its contents as a string
+        file_inp=filename
+        try:            
+            fid_error=open(filename,'w')           
+            s=""         
+            fid_error.write(s)
+            fid_error.close()
+                        
+        except ValueError:
+            print "Error writing to %s"%(filename)
+        except IOError as e:
+            print "I/O error({0}): {1}".format(e.errno, e.strerror)
+            print "Error reading {0} ".format(file_inp)
+            raise
+        return 0
+
 initialize_error(file_error_log)
+
+for file_name_err in set_error_names:
+    initialize_blank(file_name_err)
+
+
 
 #==============================================================================
 # Read the data from the participants file

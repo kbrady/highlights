@@ -36,8 +36,8 @@ frame_orig=pd.read_csv(file_orig, na_filter=False, dtype=str)
 #==============================================================================
 frame_copy=frame_orig.copy()
 
-dict_cols={"word": 1, "phrase":   2, "sentence": 3,  "sentence+phrase": 4, "paragraph": 5, "multiple_paragraphs": 6 }
-dict_inv={1: "word", 2: "phrase", 3: "sentence",4:   "sentence+phrase", 5: "paragraph", 6: "multiple_paragraphs" }
+dict_cols={"word": 1, "phrase":   2, "sentence": 3,  "sentence + phrase": 4, "paragraph": 5, "multiple_paragraphs": 6 }
+dict_inv={1: "word", 2: "phrase", 3: "sentence",4:   "sentence + phrase", 5: "paragraph", 6: "multiple_paragraphs" }
 frame_orig["word"]=np.array( [0]*len(frame_orig), dtype=int )
 frame_orig["phrase"]=np.array( [0]*len(frame_orig), dtype=int )
 frame_orig["sentence"]=np.array( [0]*len(frame_orig), dtype=int )
