@@ -24,7 +24,7 @@ import time
 #general log file
 file_error_log='error.log'
 
-file_error_spelling='error_spelling.csv'
+#file_error_spelling='error_spelling.csv'
 file_spelling_log='error_spelling.dat'
 
 def write_error_text(filename, motive, location):    
