@@ -78,6 +78,16 @@ def get_clean_text_file(filename):
 
 
 #==============================================================================
+# functions for path
+#==============================================================================
+
+def get_path_aoi(file_sec):
+    name_extract=os.path.split(file_sec)
+    new_name="aoi.csv"    
+    file_aoi=os.path.join(name_extract[0],new_name)
+    return file_aoi
+
+#==============================================================================
 # Source files loader
 #==============================================================================
 
@@ -106,10 +116,31 @@ file_lines=[0]*number_of_parts
 file_set=[0]*number_of_parts
 t=0
 
+path_aoi=get_path_aoi(input_files[0])
 
 
 #==============================================================================
-#  Read file
+# Read file with aoi definitions
+#==============================================================================
+
+aoi_def=pd.read_csv(path_aoi, na_filter=False, dtype=str)
+
+col_list_aoi=[0]*number_of_parts
+sel_list_aoi=[0]*number_of_parts
+for p in range(number_of_parts):    
+    arr_sel_par=np.array( (aoi_def["Part"][:]=="%d"%(p+1) ), dtype=bool)
+    selection=aoi_def[arr_sel_par]
+    sel_list_temp=list(selection["ID"])
+    list_temp=[]
+    for sel in sel_list_temp:
+        str_sel="AOI_%d"%( int(sel))
+        list_temp.append([str_sel])
+    col_list_aoi[p]=list_temp
+
+
+
+#==============================================================================
+#  Read file with results
 #==============================================================================
 
 len_frames=[0]*number_of_parts
@@ -131,7 +162,7 @@ for t in range(0,number_of_parts):
 #==============================================================================
 #  Unique IDs
 #==============================================================================
-print "Output statistics by ID"
+print "Reading the IDs of participants"
 
 ID_unique_array=list( set( np.array(frame_aois["ID"], dtype=int) ) )
 ID_unique_array.sort()
@@ -146,13 +177,12 @@ dict_ID_to_index={}
 dict_index_to_ID={}
 
 t=0
-for ID in ID_unique_array:    
-    for letter in lettercond:        
-        pairs_ID_letter=[ID, letter]
-        pair=tuple(pairs_ID_letter)               
-        dict_ID_to_index[pair]=t
-        dict_index_to_ID[t]=pair
-        t=t+1    
+for ID in ID_unique_array:             
+    #pairs_ID_letter=[ID, letter]
+    #pair=tuple(pairs_ID_letter)               
+    dict_ID_to_index[ID]=t
+    dict_index_to_ID[t]=ID
+    t=t+1    
         
 num_comp_array=t    
 
@@ -166,12 +196,22 @@ head_list=list(frame_aois)
 head_list_reduced=head_list[:]
 head_list_reduced.remove("ID")
 
-merged_aoi= pd.DataFrame( { "ID": [""]*num_comp_array  }  )   
+merged_aoi= pd.DataFrame( { "ID": ID_unique_array }  )   
 
 for head in head_list_reduced:    
     merged_aoi[head]=np.array([""]*num_comp_array, dtype=str )
 
+merged_aoi["count"]= np.array([0]*num_comp_array , dtype=int) 
 
+
+
+head_aoi=head_list[:]
+for h in head_list:
+    ind=h.find("AOI")
+    if ind ==-1:
+        head_aoi.remove(h)
+print "Found the following AOI:"
+print head_aoi
 
 #==============================================================================
 # Adding
@@ -184,65 +224,92 @@ def is_incomplete(entry_frame):
         return False            
     return True
 
+
+def is_zero_or_blank(field):
+    if ( field=="%d"%(0) ) or (field==""):
+        return True
+    
+    return False
+
 #==============================================================================
 # filling up merged frame
 #==============================================================================
+
+
 
 print "filling up frame"
 num_merged=len(frame_aois)
 for t in range(num_merged):
     entry_ID=int(frame_aois.loc[t,"ID"])
     letter_str=(frame_aois.loc[t,"Condition"])
-    
     letter=(letter_str.split())[0]
      
     try:
-        pair=tuple([entry_ID,letter])
-        row=dict_ID_to_index[pair]        
+        #pair=tuple([entry_ID,letter])
+        row=dict_ID_to_index[entry_ID]        
     except KeyError:
-        print "Error processing row %d, not in set of valid ID"%(t)
-        print pair
+        print "Error processing row %d, not in set of valid ID"%(t) 
         raise       
-    
-    
-    
-   # incom_orig=is_incomplete(frame_aois.loc[t,"Condition"]  )
-   # incom_merged=is_incomplete(frame_aois.loc[t,"Condition"]  )
-   
- #   str_condition=frame_aois.loc[t,"Condition"]    
-  #  index_incom=str_condition.find("Incomplete")
-    
-    merged_aoi.loc[row,:]=frame_aois.loc[t,:]    
 
-        
+       
+    if merged_aoi.loc[row,"count"]==0:
+       
+        for col in head_aoi: 
+            merged_aoi.loc[row,col]="%d"%(int(frame_aois.loc[t,col]) )  
+                
+    else:       
+        for col in head_aoi: 
+            has_zero= ( is_zero_or_blank( merged_aoi.loc[row,col] ) or is_zero_or_blank(frame_aois.loc[t,col]) )
+            if has_zero==True :                          
+                merged_aoi.loc[row,col]="%d"%(int(frame_aois.loc[t,col]) )
+                     
+                #print "true", t, has_zero                
+            else:
+               # print "overriding attempt ", t, merged_aoi.loc[row,col], frame_aois.loc[t,col], row, col
+                continue
+            
+    merged_aoi.loc[row,"origin_file"]=frame_aois.loc[t,"origin_file"]        
+    merged_aoi.loc[row,"count"]+=1
+    str_cond=frame_aois.loc[t,"Condition"]
+    merged_aoi.loc[row,"Condition"]=str_cond.strip()[0]
     
-    
-print "no problem"    
-raise 
+print "All done with merging the data"    
+ 
+#==============================================================================
+# Checking extra counts 
+#==============================================================================
+
+for t in range( len(merged_aoi )   ):
+    val_count=merged_aoi.loc[t,"count"]
+    if val_count>number_of_parts:
+        print "Big problem in", t
+
+array_exceeded= np.array(merged_aoi["count"]>number_of_parts, dtype=bool)
+error_frame=merged_aoi[array_exceeded]
+
+array_missing= np.array(merged_aoi["count"]<number_of_parts, dtype=bool)
+
+merged_aoi.loc[array_missing,"Condition"]="incomplete"
+
+error_exceed=merged_aoi[array_exceeded]
+
+error_frame=merged_aoi[array_missing]
+
+print "We found ", len(error_frame), " incomplete entries."
+
+fid=open("not_found.dat","w")
+s=("%d \n")%len(error_frame)
+fid.write(s)
+fid.close()
 
 #==============================================================================
 #  Error report
 #==============================================================================
 
 
-motive="Entries with incomplete conditions detected"
-array_should_drop= np.logical_not(array_good_condition)  #schedule them for elimination
-num_bad_conditions=sum(array_should_drop)
+error_frame.to_csv("merger_error.csv")
+error_exceed.to_csv("overcount_error.csv")
 
-
-#copy bad rows and report error
-df_bad=parts_taken[array_should_drop]
-if len(df_bad)>0:
-    df_bad.to_csv(file_error_csv, header=True, index=True)
-    write_error(file_error_log,df_bad,motive,file_error_csv)
-    
-size_bad=len(df_bad)
-fid_missing=open(file_error_missing, 'w')
-
-for t in range(size_bad):
-    s="ID: %s \t missing: %s \n"%(df_bad.loc[t,"ID"], df_bad.loc[t,"missing"])
-    fid_missing.write(s)
-fid_missing.close()    
     
     
     
