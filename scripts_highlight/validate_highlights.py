@@ -182,6 +182,16 @@ for t in range(number_of_parts):
     file_lines[t]=get_lines(input_files[t])
     file_set[t]=get_clean_text_file(input_files[t])
 
+def unique_find(str_target,str_text):
+    #this will search for a match and make output its uniquenss
+    #the code will search for the fragment from the left and from the right. If its unique the positions will be the same
+    ind_first=str_text.find(str_target)
+    ind_last=str_text.rfind(str_target)
+    match= (ind_first == ind_last) # true if its a unique fragment
+    struct_find=[ind_first,match]
+    if ind_first==-1 :
+        raise ValueError
+    return match
 
 
 
@@ -209,6 +219,7 @@ num_highlights=sum(array_highlight)
 
 valid_highlights=np.array([0]*size_data, dtype=bool)
 array_blank=np.array([False]*size_data ,dtype=bool)
+array_duplicate=np.array([False]*size_data ,dtype=bool)
 
 t=0  
 failure_count=0  #stores the number of highlights that were not located
@@ -237,13 +248,33 @@ for t in range(size_data):
          if len(high_of_row)==0: 
              # the highlight is blank             
              array_blank[t]=True
-             data_orig.loc[t,"blank?"]="%d"%(1)
+             data_orig.loc[t,"blank?"]="%d"%(1)   
+             #ensure the fragment does not appear multiple times
+         try:
+            
+             is_unique = unique_find(high_of_row,file_cleaned) 
+             if is_unique== False:
+                 #duplicate is present
+                 array_duplicate[t]=True 
+                 print "Duplicate in row ", t+1, " with text ", high_of_row
+         except ValueError:
+             print "Error looking for duplicate in row ", t+1 , " with text ", high_of_row
+             
+            
+             
+             
      highl_index_beg[t]=index
      highl_index_end[t]=index+len(high_of_row)-1
      data_orig.loc[t,"ind_start"]=highl_index_beg[t]
      data_orig.loc[t,"ind_end"]=highl_index_end[t]
     
+    
+    
 print "We have %d highlights that were not located "%(failure_count)   
+
+duplicate_count=sum(array_duplicate)
+print "We have %d duplicates "%(duplicate_count)
+
 print "Problematic rows will be dropped"     
 print " \n"
 
