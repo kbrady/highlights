@@ -12,6 +12,8 @@ cp /home/jorge/spyder_work/parag_extractor.py ./
 cp /home/jorge/spyder_work/parag_funct.py ./
 cp /home/jorge/spyder_work/len_highlight_vars.py ./
 cp /home/jorge/spyder_work/run_highlights.py ./
+cp /home/jorge/spyder_work/duplicate_handler.py ./
+
 
 
 

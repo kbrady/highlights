@@ -72,6 +72,7 @@ file_out=get_name(line_list,"clean:")
 print "Output Name acquired ", file_out
 
 file_blank="blank.csv"
+file_multiplicity="multiplicity.csv"
 
 #==============================================================================
 # Error logs
@@ -107,10 +108,37 @@ def write_error(filename,frame,motive, location):
         except IOError as e:
             print "I/O error({0}): {1}".format(e.errno, e.strerror)
             print "Error reading {0} ".format(file_inp)
-            raise
+            raise IOError
         return 0
 
-
+def write_error_duplicate(filename,frame,motive, location):
+    # reads a file and reaturns its contents as a string
+        file_inp=filename
+        try:
+            num_error_rows=len(frame)
+            if num_error_rows==0:
+                return 0  #no error to output
+            fid_error=open(filename,'a')      
+            s="Error found \n"
+            fid_error.write(s)
+            s="Motive: %s \n"%(motive)
+            fid_error.write(s)
+            s="Rows with duplicates: %d \n"%(num_error_rows)
+            fid_error.write(s)
+            s="A copy of problem rows has been stored in: %s \n"%(location)
+            fid_error.write(s)
+            s=" \n \n"
+            fid_error.write(s)
+            fid_error.close()
+            
+            
+        except ValueError:
+            print "Error writing to %s"%(filename)
+        except IOError as e:
+            print "I/O error({0}): {1}".format(e.errno, e.strerror)
+            print "Error reading {0} ".format(file_inp)
+            raise IOError
+        return 0
 
 #==============================================================================
 # Words files
@@ -271,12 +299,52 @@ for t in range(size_data):
     
     
 print "We have %d highlights that were not located "%(failure_count)   
-
 duplicate_count=sum(array_duplicate)
-print "We have %d duplicates "%(duplicate_count)
+print "We have %d entries with multiplicities "%(duplicate_count)
 
 print "Problematic rows will be dropped"     
 print " \n"
+
+
+#==============================================================================
+# Export duplicates
+#==============================================================================
+
+#figure out which entries are duplicate
+df_dup=data_orig[array_duplicate].copy()
+df_dup["new_beg"]=np.array( [0]*len(df_dup), dtype= int )
+df_dup["new_end"]=np.array( [0]*len(df_dup), dtype= int )
+df_dup["multiplicity"]=np.array( [0]*len(df_dup), dtype= int )
+df_dup["appearances"]=np.array( [" "]*len(df_dup), dtype= str )
+
+count_dup=0
+import duplicate_handler
+for t in df_dup.index:
+    num_instances=0
+    instances=[]
+    seltext=get_clean_text(df_dup.loc[t,"Text"])
+    p=int(df_dup.loc[t,"Part"])
+    #print "index ", t
+    if (seltext!=" ") and (seltext !="") :
+        count_dup+=1
+        list_instances=duplicate_handler.num_instances(seltext, file_set[p-1])
+        list_inst_str= [ "%d"%(el) for el in list_instances ]
+        num_instances=len(list_instances)
+        str_appear=" ".join(list_inst_str)
+        df_dup.loc[t,"appearances"]=str_appear
+    df_dup.loc[t,"multiplicity"]=num_instances
+   
+
+df_dup.to_csv(file_multiplicity)
+
+arr_multip=np.array( df_dup["Text"], dtype=str)
+list_mult= list( set( list(arr_multip) ) )
+
+if count_dup>0:
+    motive="Entries with multiple intances detected. "
+    write_error_duplicate(file_error_log,df_dup,motive,file_multiplicity)
+
+print "Finished with duplicates.. for now"
 
 #==============================================================================
 # Export the blank entries
@@ -369,6 +437,23 @@ for t in range(size_data):
 
 words_frame.to_csv(file_words_csv, header=True )
 
+
+#==============================================================================
+# Setthe issues with duplicates 
+#==============================================================================
+
+
+#print "Ambiguity must be solved"
+#
+#
+#
+##figure out which entries are duplicate
+#df_dup=data_orig[array_duplicate]
+#df_dup["new_beg"]=np.array( [0]*len(df_dup), dtype= int )
+#df_dup["new_end"]=np.array( [0]*len(df_dup), dtype= int )
+#
+#print "Problematic rows will be dropped"     
+#print " \n"
 
 
 #==============================================================================

@@ -375,8 +375,8 @@ array_should_drop= np.logical_not(array_isdigit)  #schedule them for elimination
 motive=" ID is invalid "
 file_error_csv=file_error_ID
 df_bad=data_cop[array_should_drop]
-if len(df_bad)>0:
-    df_bad.to_csv(file_error_csv, header=True, index=True)
+df_bad.to_csv(file_error_csv, header=True, index=True)
+if len(df_bad)>0:    
     write_error(file_error_log,df_bad,motive,file_error_csv)
 
 
