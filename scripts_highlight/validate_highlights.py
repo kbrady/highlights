@@ -281,7 +281,7 @@ for t in range(size_data):
          try:
             
              is_unique = unique_find(high_of_row,file_cleaned) 
-             if is_unique== False:
+             if (is_unique== False) and (array_blank[t]==False):
                  #duplicate is present
                  array_duplicate[t]=True 
                  print "Duplicate in row ", t+1, " with text ", high_of_row

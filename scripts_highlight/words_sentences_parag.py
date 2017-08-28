@@ -212,6 +212,28 @@ num_sentences=len(frame_sentence)
 # Get the sentence index for each word
 #==============================================================================
 
+#ad hoc correction to force a local index instead of a global
+#frame_sentence["index_local"]=np.array( [0]*num_sentences, dtype=int )
+
+words_part=[0]*number_of_parts
+size_part=[0]*number_of_parts
+correc_array=[0]*number_of_parts
+
+#fill up word sizes
+for p in range(number_of_parts ):
+    logi_part1=np.array(words_frame.loc[:,"Part"]=="%d"%(p+1), dtype=bool )
+    num_words_p1=sum(logi_part1)
+    words_part[p]=num_words_p1    
+
+#fill up sentence sizes
+for p in range(number_of_parts ):
+    logi_part1=np.array(frame_sentence.loc[:,"Part"]=="%d"%(p+1), dtype=bool )
+    num_sent_p1=sum(logi_part1)
+    size_part[p]=num_sent_p1
+    
+
+    
+loc_count=0    
 k=0
 offset=0
 for t in range(num_sentences):
@@ -223,10 +245,22 @@ for t in range(num_sentences):
     
     match=(words_array==sentence_array)
     if match==True:
-        words_frame.loc[offset:len_sent+offset,"in_sentence"]="%d"%(k)
+        p=int(frame_sentence.loc[t,"Part"])-1
+        if p==0:
+            corr_sent=0
+        else:
+            corr_sent=size_part[p-1]        
+        loc_ind_sent= loc_count-corr_sent  
+        
+        words_frame.loc[offset:len_sent+offset,"in_sentence"]="%d"%(loc_ind_sent)
         frame_sentence.loc[t,"beg_word_index"]=offset
         frame_sentence.loc[t,"end_word_index"]=offset+len_sent-1
         frame_sentence.loc[t,"len_words"]=len_sent
+        #frame_sentence.loc[t,"index_local"]=loc_count
+        loc_count+=1
+        
+#        if loc_count==size_part[p]:
+#            loc_count=0  #reset
         k=k+1
         offset=offset+len_sent
     else:
@@ -236,6 +270,21 @@ for t in range(num_sentences):
         raise
 print "A total of %d sentences were allocated"%(k)
 
+# Ad hoc correction for indexes
+
+correc_off=frame_sentence.loc[size_part[0],"beg_word_index"]
+
+for t in range(num_sentences):
+    p=int(frame_sentence.loc[t,"Part"])-1
+    if t <size_part[0]:
+        correc=0        
+        #print "correc ", t, p , size_part[p]
+    else:
+        correc=correc_off
+       
+    frame_sentence.loc[t,"beg_word_index"]+=(-correc)
+    frame_sentence.loc[t,"end_word_index"]+=(-correc)
+    
 #==============================================================================
 #  Extract the paragraphs
 #==============================================================================
@@ -258,6 +307,16 @@ num_parag=len(frame_parag)
 #  Get the paragraph index for each word
 #==============================================================================
 
+size_parag=[0]*number_of_parts
+
+#fill up word sizes
+for p in range(number_of_parts ):
+    logi_part1p=np.array(frame_parag.loc[:,"Part"]=="%d"%(p+1), dtype=bool )
+    num_parag_p1=sum(logi_part1p)
+    size_parag[p]=num_parag_p1   
+
+
+loc_count=0
 k=0
 offset=0
 for t in range(num_parag):
@@ -269,10 +328,22 @@ for t in range(num_parag):
     
     match=(words_array==parag_array)
     if match==True:
-        words_frame.loc[offset:len_parag+offset,"in_paragraph"]="%d"%(k)
+        p=int(frame_parag.loc[t,"Part"])-1
+        if p==0:
+            corr_loc=0
+        else:
+            corr_loc=size_parag[p-1]
+        loc_ind_new= loc_count-corr_loc   
+        words_frame.loc[offset:len_parag+offset,"in_paragraph"]="%d"%(loc_ind_new)
         frame_parag.loc[t,"beg_word_index"]=offset
         frame_parag.loc[t,"end_word_index"]=offset+len_parag-1
         frame_parag.loc[t,"len_words"]=len_parag
+        loc_count+=1
+        #p=int(frame_sentence.loc[t,"Part"])-1
+        #if loc_count==size_parag[p]:
+        #    print "Reset" , loc_count   
+        #    loc_count=0  #reset
+            
         k=k+1
         offset=offset+len_parag
     else:
@@ -281,6 +352,20 @@ for t in range(num_parag):
         print parag_array 
         raise
 print "A total of %d paragraphs were allocated"%(k)
+
+correc_off=frame_parag.loc[size_parag[0],"beg_word_index"]
+#correction
+for t in range(num_parag):
+    p=int(frame_parag.loc[t,"Part"])-1
+    if t <size_parag[0]:
+        correc=0        
+        #print "correc ", t, p , size_part[p]
+    else:
+        correc=correc_off
+   # print "correc ", t, p , size_part[p]  , correc 
+    frame_parag.loc[t,"beg_word_index"]+=(-correc)
+    frame_parag.loc[t,"end_word_index"]+=(-correc)
+
 
 
 #==============================================================================
