@@ -94,7 +94,7 @@ def load_stored_file(file_paths,part,letter,ID):
         input_path[t]=s.strip()
     filename="womens_suffrage_%d_%s_%d.html"%(part,letter,ID)    
     full_path=os.path.join(input_path[0],filename  )
-    print full_path
+   # print full_path
     text=read_whole(full_path)
     return text
 
@@ -129,8 +129,8 @@ def test_recovery():
 
 def do_recovery(part,ID):
     file_paths="digital_storage.inp"
-    part=2
-    ID=3191
+    #part=2
+    #ID=3191
     dict_letter={1:"B", 2:"A"}
     letter=dict_letter[part]
 
@@ -337,6 +337,8 @@ def get_text_with_annot(part,ID):
     index_ini=text.index(initial_tag)    
     # get end tag position
     end_tag=get_end_tag(part,ID)    
+    
+    
     index_end=text.index(end_tag)
     trim=text[index_ini:index_end]    
     purged=text_purger(trim)    
@@ -367,6 +369,18 @@ def verify_with_original(text,part):
         print "Verification failed"
         return False
 
+def retrieve_original_text(part):
+    
+    if part==2:
+        orig=read_whole("/home/jorge/Documents/highlights/TIPs_middle_school_stimuli/content/womens_suffrage_2.md")
+    elif part==1:
+        orig=read_whole("/home/jorge/Documents/highlights/TIPs_middle_school_stimuli/content/womens_suffrage_1.md")
+    orig_clean=get_clean_text(orig)
+    
+    return orig_clean
+
+
+
 #==============================================================================
 # Procedures
 #==============================================================================
@@ -379,12 +393,18 @@ requested_str="1920"
 part=2
 ID=3191
 def retrieve_annotations_digital(part, ID):
+    #try:
     text_annot=get_text_with_annot(part,ID)    
+    #except:
+    #print "Problems with annotation ", "ID= ", ID, " part ", part
+    #return []
+        
     annot=tagChecker(text_annot,open_tag,close_tag,status_res)
     num_annot=len(annot)    
     set_of_annot=[]
     set_of_annot_clean=[]
     word_index_set=[]
+    text_index_set=[]
     for elem in annot:
         ind_ini=elem[0]
         ind_fin=elem[1]
@@ -397,18 +417,23 @@ def retrieve_annotations_digital(part, ID):
         word_array=prec_text.split()
         word_index=len(word_array)
         word_index_set.append(word_index)    
-    
+        restored_text=" ".join(word_array)
+        len_restored=len(restored_text)
+        text_index_set.append(len_restored)
+        
     results=[]
     results.append(set_of_annot)
     results.append(set_of_annot_clean)
     results.append(word_index_set)
-
+    results.append(text_index_set)
     return results
-res_retrieved=retrieve_annotations_digital(part,ID)
 
+
+res_retrieved=retrieve_annotations_digital(part,ID)
 retr_annot_tag=np.array( res_retrieved[0] ,dtype=str)
 retr_annot=np.array( res_retrieved[1] , dtype=str)
-retr_index=np.array(res_retrieved[2], dtype=int)
+retr_word_index=np.array(res_retrieved[2], dtype=int)
+retr_text_index=np.array(res_retrieved[3], dtype=int)
 
 num_annot=len(retr_annot)
 ismatch=np.array( [False]*num_annot, dtype=bool  )
@@ -416,18 +441,116 @@ for t in range(num_annot):
     str_annot=retr_annot[t]
     ismatch[t]=(str_annot==requested_str)
 
-match_index=retr_index[ismatch]
-
-#par1=annot[0]
-#selec=text_annot[par1[0] : par1[1]+1]
-#selec_noa=hypothesis_tag_remove(selec)
-
-verify_with_original(text_noa,part)
+match_index=retr_word_index[ismatch]
 
 
 
+#verify_with_original(text_noa,part)
+
+def settle_duplicate_web(userID,Part_text,sel_text, num_match, list_available_index): 
+
+    # list_possible the list of possible word indexes that match
+       #list_possible[]
+
+    res_retrieved=retrieve_annotations_digital(Part_text,userID)
+    retr_annot_tag=np.array( res_retrieved[0] ,dtype=str)
+    retr_annot=np.array( res_retrieved[1] , dtype=str)
+    retr_word_index=np.array(res_retrieved[2], dtype=int)
+    retr_text_index=np.array(res_retrieved[3], dtype=int)
+    #print sel_text
+    #print "array: "
+    #for elem in retr_annot:
+     #   print "####",elem, "###"
+    array_requested=(retr_annot==sel_text)  
+    if sum(array_requested)==0:
+        print "Error finding all expected annotations :", sel_text
+        return -1
+
+    if sum(array_requested)>1:       
+       # print "The file contains more than one annotation with same text"
+       # print sel_text
+       # for u in range(len(array_requested)):
+       #     print u, array_requested[u], retr_annot[u]
+       # print " \n "    
+        return -2
+    
+    index_list=retr_text_index[array_requested]
+
+    #get the current index to identify
+    
+    num_match=0
+    
+    
+    index_current=index_list[0]
+
+    list_distances=[]
+    for t in range(len(list_available_index)):
+        dist=abs(index_current-list_available_index[t])
+        list_distances.append(dist)
+       # print dist, "dist"
+
+    min_dist_ind=np.argmin(list_distances)
+   # print "min dist ", list_distances[min_dist_ind], list_available_index[min_dist_ind]
+    return list_available_index[min_dist_ind]
+
+def settle_duplicate_web_multi(userID,Part_text,sel_text, num_sel, list_available_index): 
+
+    # list_available_index is the list with the indexes with all instances of the selected text within the reading. 
+    # num_match is the number of times the highlight was made
+    #index list has the list of annotations made
+
+    res_retrieved=retrieve_annotations_digital(Part_text,userID)
+    retr_annot_tag=np.array( res_retrieved[0] ,dtype=str)
+    retr_annot=np.array( res_retrieved[1] , dtype=str)
+    retr_word_index=np.array(res_retrieved[2], dtype=int)
+    retr_text_index=np.array(res_retrieved[3], dtype=int)
+  
+    
+    array_requested=(retr_annot==sel_text)  
+    if sum(array_requested)==0:
+        print "Error finding all expected annotations"
+        return [-1]
+
+ 
+    
+    index_list_annot=retr_text_index[array_requested]
+
+    num_annot=len(index_list_annot) # num_sel])
+    num_instances=len(list_available_index)
+   # print "Requested annotations :",  sum(array_requested), "for user ID= ", userID, Part_text,"# ", sel_text, " #"
+   # print "Detected ", num_annot ," annotations inside the file.", "available indexes: ", num_instances 
+    global_list=[]
+    
+   # if num_match>len(index_list)
+    for k in range(num_annot):
+        #select an annotation
+        index_current_an=index_list_annot[k]
+        list_distances=[] 
+        
+        for l in range(num_instances):
+            dist=abs(index_current_an-list_available_index[l])
+            list_distances.append(dist)
+            
+            
+            #store the distance with the value of l that produced it
+        min_dist_ind=np.argmin(list_distances)        
+        
+        global_list.append(list_available_index[min_dist_ind])  #store selected available instance
+    
+    if len(global_list)!=num_sel:
+        pass
+        # print "Mismatch between allocated and expected annotations", "numsel ", num_sel, "len_list", len(global_list)
+       # print [ elem for elem in global_list] 
+        return [-1]
+   
+    return  global_list
 
 
+resu=settle_duplicate_web(ID,part,"1920",0,[4381])
+original_text=retrieve_original_text(part)
+original_text_words=original_text.split()
+
+print "elem ", "#%s"%(original_text[resu:resu+20])
 
 
 print "Finished"

@@ -73,6 +73,7 @@ print "Output Name acquired ", file_out
 
 file_blank="blank.csv"
 file_multiplicity="multiplicity.csv"
+file_bad_multiplicity="bad_multiplicity.csv"
 
 #==============================================================================
 # Error logs
@@ -316,10 +317,40 @@ df_dup["new_beg"]=np.array( [0]*len(df_dup), dtype= int )
 df_dup["new_end"]=np.array( [0]*len(df_dup), dtype= int )
 df_dup["multiplicity"]=np.array( [0]*len(df_dup), dtype= int )
 df_dup["appearances"]=np.array( [" "]*len(df_dup), dtype= str )
+df_dup["allocated"]=np.array( [""]*len(df_dup), dtype= str )
+df_dup["allocated_iter2"]=np.array( [""]*len(df_dup), dtype= str )
 
 count_dup=0
 import duplicate_handler
+
+print "Acquiring ID list with duplicates"
+
+entries_with_dup=df_dup[["Participant","Part", "type", "Text"]]
+entries_with_dup_unique= entries_with_dup.drop_duplicates(keep="first")
+ 
+ID_dup_array=np.array(entries_with_dup_unique["Participant"], dtype=int)
+type_dup_array=np.array(entries_with_dup_unique["type"], dtype=str)
+part_dup_array=np.array(entries_with_dup_unique["Part"], dtype=int)
+
+
+dict_duplicates={}
+for t in range(len(ID_dup_array)):   
+   userID=ID_dup_array[t]
+   type_str=type_dup_array[t]
+   part_dup=part_dup_array[t]
+   
+   ind_in_dup=entries_with_dup_unique.index[t]
+   text_dup=get_clean_text( entries_with_dup_unique.loc[ind_in_dup, "Text"] )
+   tup=tuple([userID, type_str, part_dup, text_dup])
+   dict_duplicates[tup]=t
+
+count_array=np.array([0]*len(ID_dup_array), dtype=int  )
+
+
+k=-1
+
 for t in df_dup.index:
+    k+=1
     num_instances=0
     instances=[]
     seltext=get_clean_text(df_dup.loc[t,"Text"])
@@ -332,8 +363,120 @@ for t in df_dup.index:
         num_instances=len(list_instances)
         str_appear=" ".join(list_inst_str)
         df_dup.loc[t,"appearances"]=str_appear
-    df_dup.loc[t,"multiplicity"]=num_instances
-   
+        df_dup.loc[t,"multiplicity"]=num_instances
+        type_str=df_dup.loc[t,"type"]
+        if df_dup.loc[t,"type"]=="website":        
+            userID=int(df_dup.loc[t,"Participant"])
+            
+            Part_text=int(df_dup.loc[t,"Part"])
+            
+            str_alloc_prev=df_dup.loc[t,"allocated"]
+            #num_prev=len(str_alloc_prev.split())
+            
+            tup=tuple([userID, type_str, Part_text, seltext])
+            ind_dict=dict_duplicates[tup]            
+            count_array[ind_dict]+=1
+            
+            num_prev=0
+            correct_index=duplicate_handler.settle_duplicate_web(userID,Part_text,seltext, num_prev ,list_instances)
+            if correct_index>0:
+                str_alloc=df_dup.loc[t,"allocated"]+" "+"%d"%(correct_index)
+                df_dup.loc[t,"allocated"]=str_alloc                
+              #  print str_alloc, len(str_alloc.split())
+            elif correct_index==-2:
+                print "Case of multiple highlights for ", seltext, " userID=", userID
+                df_dup.loc[t,"allocated"]="-2"
+                 
+            elif correct_index==-1:
+              #  print "Cannot fix the selected duplicate ", t, seltext
+                df_dup.loc[t,"allocated"]="-1"
+               
+               
+        elif df_dup.loc[t,"type"]=="paper":
+            pass
+            print "paper"
+
+visit_array=np.array( [0]*len(count_array)  , dtype=int)
+
+count_realloc=0
+k=-1
+for t in df_dup.index:
+    k+=1
+    seltext=get_clean_text(df_dup.loc[t,"Text"])   
+  
+    if (seltext!=" ") and (seltext !="") :
+        type_str=df_dup.loc[t,"type"]
+        if df_dup.loc[t,"type"]=="website":        
+            userID=int(df_dup.loc[t,"Participant"])        
+            Part_text=int(df_dup.loc[t,"Part"])
+            tup=tuple([userID, type_str, Part_text, seltext])
+            ind_dict=dict_duplicates[tup]          
+            num_count=count_array[ind_dict]
+            if num_count==1:
+                # correct the index
+                index_corrected=int( df_dup.loc[t,"allocated"])
+                if index_corrected>0:                
+                    arr_sel=(data_orig["Participant"]=="%d"%(userID)) & (data_orig["Part"]=="%d"%(Part_text)) & \
+                    (data_orig["Text"]== df_dup.loc[t,"Text"]  )
+                    
+                    arr_sel=np.array(arr_sel, dtype=bool)
+                   # print "NZ ", np.nonzero(arr_sel)
+                    NZ_list=list( np.nonzero(arr_sel)[0] )
+                    sel_entry=NZ_list[0]
+                    test_text=data_orig.loc[sel_entry,"Text"]
+                    data_orig.loc[sel_entry,"ind_start"]=sel_entry
+                    raw_text=data_orig.loc[sel_entry,"Text"]
+                    data_orig.loc[sel_entry,"ind_end"]=sel_entry+len(raw_text)
+                    print "Reallocated the index for entry ", sel_entry, "for user ", userID 
+                    count_realloc+=1
+                    
+            elif num_count>1:
+               # print "Multiple highlights"
+                visit_num=visit_array[ind_dict]                
+                visit_array[ind_dict]+=1
+                str_appear=df_dup.loc[t,"appearances"]                
+                arr_appear=list(np.array( str_appear.split(), dtype=int) )
+                list_index=duplicate_handler.settle_duplicate_web_multi(userID,Part_text,seltext, num_count, arr_appear)
+                err=-1
+                if err in list_index:                    
+                    print "Cannot allocate entry. Will discard:", seltext, " for ", userID
+                    
+                else:
+                   # print t, seltext," ",str_appear, list_index, " index_dict ", ind_dict , "\n"
+                    index_corrected=list_index[visit_num]
+                    arr_sel=(data_orig["Participant"]=="%d"%(userID)) & (data_orig["Part"]=="%d"%(Part_text)) & \
+                    (data_orig["Text"]== df_dup.loc[t,"Text"]  )
+                    
+                    arr_sel=np.array(arr_sel, dtype=bool)
+               # print "NZ ", np.nonzero(arr_sel)                    
+               
+                    NZ_list=list( np.nonzero(arr_sel)[0] )                    
+                    sel_entry=NZ_list[visit_num]
+                    test_text=data_orig.loc[sel_entry,"Text"]
+                    data_orig.loc[sel_entry,"ind_start"]=index_corrected
+                    raw_text=data_orig.loc[sel_entry,"Text"]
+                    data_orig.loc[sel_entry,"ind_end"]=index_corrected+len(raw_text)
+                    df_dup.loc[t,"allocated_iter2"]="%d"%(index_corrected  )
+                    count_realloc+=1
+                pass
+                print "Multiple appearance index for entry ", sel_entry, "for user ", userID 
+                
+            else: 
+                pass
+                print "Entry has wrong number of appearances in text ", tup
+
+
+multiple_missalloc=(df_dup["allocated"]=="-2") &(df_dup["allocated_iter2"]==""  )
+single_missalloc=(df_dup["allocated"]=="-1")
+total_missalloc= single_missalloc | multiple_missalloc
+bad_realloc=np.array( total_missalloc , dtype=bool)
+
+count_bad_realloc=sum(bad_realloc)
+
+
+
+
+
 
 df_dup.to_csv(file_multiplicity)
 
@@ -343,6 +486,17 @@ list_mult= list( set( list(arr_multip) ) )
 if count_dup>0:
     motive="Entries with multiple intances detected. "
     write_error_duplicate(file_error_log,df_dup,motive,file_multiplicity)
+
+
+df_bad_dup=df_dup[bad_realloc].copy()
+df_bad_dup.to_csv( file_bad_multiplicity)
+# marking bad entries
+
+print "\n \n Reallocated ", count_realloc, "ambigous entries with multiple instances in the text."
+print "Uncorrectable entries ", count_bad_realloc, "will be dropped."
+
+index_bad_realloc=df_bad_dup.index.values
+valid_highlights[index_bad_realloc]=False
 
 print "Finished with duplicates.. for now"
 
