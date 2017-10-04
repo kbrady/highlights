@@ -167,7 +167,7 @@ def read_aoi(input_file):
             
         fid_aoi.close()
      
-        aoi_frame=pd.DataFrame({"ID": aoi_ID, 
+        aoi_frame=pd.DataFrame({"AOI_ID": aoi_ID, 
                                 "Part": aoi_part, 
                                 "name": aoi_name, 
                                 "start": aoi_start, 
@@ -201,7 +201,7 @@ def unique_find(str_target,str_text):
 
 
 aoi_frame=read_aoi(aoi_filename)
-tot_aoi=len(aoi_frame["ID"])
+tot_aoi=len(aoi_frame["AOI_ID"])
 print "We have a total of %d AOI \n"%(tot_aoi) 
 print aoi_frame["name"]
 

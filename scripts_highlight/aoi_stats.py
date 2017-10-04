@@ -67,9 +67,21 @@ highlight_info=file_input
 # Output file name
 #==============================================================================
 
-file_aoi_out="aoi_stat_csv"
+file_aoi_highlight="aoi_by_highlight.csv"
+
+file_aoi_out="aoi_stat.csv"
 
 file_aoi_by_ID = 'aoi_by_ID.csv'
+
+
+# =============================================================================
+# Import type of test (paper or website)
+# =============================================================================
+
+file_condition="type.dat"
+line=get_lines(file_condition)
+type_from_file=line[0].rsplit()[0]
+
 
 
 #==============================================================================
@@ -141,7 +153,7 @@ file_aoi='aoi.csv'
 aoi_frame=pd.read_csv(file_aoi, na_filter=False, dtype=str )
 tot_aoi=len(aoi_frame)
 
-
+aoi_frame["type"]=type_from_file
 
 
 
@@ -170,15 +182,15 @@ for t in range(size_data):
          is_overlap=not no_overlap
 
          if is_overlap==True:   
-             aoi_frame.loc[k,"hit_count"]=int(aoi_frame.loc[k,"hit_count"])+1
+             aoi_frame.loc[k,"hit_count"]=("%d")%(int(aoi_frame.loc[k,"hit_count"])+1)
             
 
-             hit_list=hit_list +[aoi_frame.loc[k, "ID"]]             
+             hit_list=hit_list +[aoi_frame.loc[k, "AOI_ID"]]             
             # print hit_list
              data_clean.loc[t,"aoi"]= " ".join( str(s) for s in hit_list )
      
 print "Finished filling up the AOI data." 
-data_clean.to_csv(file_aoi_out, columns=["Participant", "Part" , "aoi", "Text"], index=False)
+data_clean.to_csv(file_aoi_highlight, columns=["Participant", "Part" , "type", "aoi", "Text"], index=False)
 
 
 aoi_frame.to_csv(file_aoi_out, index=False)
@@ -222,8 +234,11 @@ ID_unique_array.sort()
 num_ID_unique= len(ID_unique_array)
 series_condition=[" "]*num_ID_unique
 
-aoi_results=pd.DataFrame( { "ID": ID_unique_array , "Condition": [" "]*num_ID_unique } )
+aoi_results=pd.DataFrame( { "ID": ID_unique_array , "Condition": [" "]*num_ID_unique , "type": [" "]*num_ID_unique } )
+aoi_results["type"]=dict_web_or_paper[type_from_file]
 
+aoi_results["AOI_non_part1"]=0
+aoi_results["AOI_non_part2"]=0
 
 dict_ID_to_index={}
 pairs_ID_index=zip(ID_unique_array, range(0,num_ID_unique))
@@ -261,6 +276,13 @@ for t in range(size_data):
             continue
         col_name="AOI_%d"%( y )
         aoi_results.loc[index,col_name]= int(aoi_results.loc[index,col_name])+1
+    if hit_len==0:
+       if data_clean.loc[t, "Part"]=="1": 
+           aoi_results.loc[index,"AOI_non_part1"]+=1
+       elif data_clean.loc[t, "Part"]=="2":    
+           aoi_results.loc[index,"AOI_non_part2"]+=1
+       else:
+           print "Bad part for ", t
 
 num_badcondition=0
 
@@ -290,7 +312,7 @@ for t in range(num_ID_unique):
         array_good_condition[t]=True
 
         
-col_list= ["ID", "Condition"]+[ "AOI_%d"%(t) for t in range(1,tot_aoi+1) ] 
+col_list= ["ID", "Condition", "type"]+[ "AOI_%d"%(t) for t in range(1,tot_aoi+1) ] 
 aoi_results.to_csv(file_aoi_by_ID, header=True,columns= col_list, index=False )
 
 #==============================================================================

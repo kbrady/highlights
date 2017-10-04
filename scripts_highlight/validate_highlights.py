@@ -15,7 +15,7 @@ import errno
 import numpy as np
 import pandas as pd
 
-
+const_end=99999999
 
 
 #==============================================================================
@@ -141,6 +141,34 @@ def write_error_duplicate(filename,frame,motive, location):
             raise IOError
         return 0
 
+def write_error_duplicate_corrected(filename,frame,motive, location):
+    # reads a file and reaturns its contents as a string
+        file_inp=filename
+        try:
+            num_error_rows=len(frame)
+
+            fid_error=open(filename,'a')      
+            s="Multiplicity correction procedures finished. \n"
+            fid_error.write(s)
+            s="Motive: %s \n"%(motive)
+            fid_error.write(s)
+            s="Rows with duplicates: %d \n"%(num_error_rows)
+            fid_error.write(s)
+            s="A copy of problem rows has been stored in: %s \n"%(location)
+            fid_error.write(s)
+            s=" \n \n"
+            fid_error.write(s)
+            fid_error.close()
+            
+            
+        except ValueError:
+            print "Error writing to %s"%(filename)
+        except IOError as e:
+            print "I/O error({0}): {1}".format(e.errno, e.strerror)
+            print "Error reading {0} ".format(file_inp)
+            raise IOError
+        return 0
+
 #==============================================================================
 # Words files
 #==============================================================================
@@ -232,9 +260,22 @@ print "Reading data from participants"
 data_orig=pd.read_csv(highlight_info, na_filter=False, dtype=str )
 size_data=len(data_orig)
 
+# =============================================================================
+# Load correction data
+# =============================================================================
+
+def load_corrections():
+    try:
+        file_inp="bad_multiplicity_corrections.csv"
+        df_man_cor=pd.read_csv(file_inp, na_filter=False, dtype=str, index_col=0)
+    except IOError as e:
+        print "I/O error({0}): {1}".format(e.errno, e.strerror)
+        print "Error reading {0} ".format(file_inp)
+        print "File with multiplicity corrections not found"
+        return []
+    return df_man_cor
 
 
-    
 #==============================================================================
 # Validate highlights 
 #==============================================================================
@@ -306,10 +347,98 @@ print "We have %d entries with multiplicities "%(duplicate_count)
 print "Problematic rows will be dropped"     
 print " \n"
 
+import duplicate_handler
+
+# =============================================================================
+# Load duplicate corrections
+# =============================================================================
+
+
+file_condition="type.dat"
+line=get_lines(file_condition)
+type_from_file=line[0].rsplit()[0]
+
+
+
+if type_from_file=="paper":
+    df_multipl_correct=load_corrections()
+    df_multipl_correct["context_before_index_beg"]= np.array([0]*len(df_multipl_correct) , dtype=int)
+    df_multipl_correct["context_before_index_end"]= np.array([0]*len(df_multipl_correct) , dtype=int)
+    
+    df_multipl_correct["context_after_index_beg"]= np.array([0]*len(df_multipl_correct) , dtype=int)
+    df_multipl_correct["context_after_index_end"]= np.array([0]*len(df_multipl_correct) , dtype=int)
+    df_multipl_correct["context_before_valid"]= np.array([True]*len(df_multipl_correct) , dtype=bool)
+    df_multipl_correct["context_after_valid"]= np.array([True]*len(df_multipl_correct) , dtype=bool)
+    
+    context_cols=["context_before_index_beg", "context_before_index_end", "context_after_index_beg", "context_after_index_end" ]
+    
+    
+    
+    for t in df_multipl_correct.index:
+        print "checking problem", t
+        Part_text=int(df_multipl_correct.loc[t, "Part" ]   )
+        seltext_orig=df_multipl_correct.loc[t, "context_before"]
+        seltext=get_clean_text( seltext_orig)
+        if (seltext!=" ") and (seltext !="") :        
+            text_from_file=file_set[Part_text-1]
+            index_context=text_from_file.find(seltext)
+            #list_instances=duplicate_handler.num_instances(seltext, file_set[Part_text-1])
+            if index_context >=0:
+                #multiple possible previous text choices
+                
+              
+               # file_set[Part_text-1]
+                df_multipl_correct.loc[t,"context_before_index_beg"]=index_context
+                df_multipl_correct.loc[t,"context_before_index_end"]=index_context+len(seltext)
+            elif index_context ==-1 :
+                # only one entry for the previous text
+                df_multipl_correct.loc[t,"context_before_index_beg"]=0
+                df_multipl_correct.loc[t,"context_before_index_end"]=0
+                df_multipl_correct.loc[t,"context_before_valid"]=False
+        #context_after=df_multipl_correct.loc[t, "context_after"]
+        else:
+            df_multipl_correct.loc[t,"context_before_index_beg"]=0
+            df_multipl_correct.loc[t,"context_before_index_end"]=0
+            print "blank", t
+            
+        seltext_orig=df_multipl_correct.loc[t, "context_after"]
+        seltext=get_clean_text( seltext_orig)        
+        if (seltext!=" ") and (seltext !="") :        
+            text_from_file=file_set[Part_text-1]
+            index_context=text_from_file.find(seltext)
+            #list_instances=duplicate_handler.num_instances(seltext, file_set[Part_text-1])
+            if index_context >=0:
+                #multiple possible previous text choices
+                
+                
+               # file_set[Part_text-1]
+                df_multipl_correct.loc[t,"context_after_index_beg"]=index_context
+                df_multipl_correct.loc[t,"context_after_index_end"]=index_context+len(seltext)
+            elif index_context ==-1 :
+                # only one entry for the previous text
+                df_multipl_correct.loc[t,"context_after_index_beg"]=const_end
+                df_multipl_correct.loc[t,"context_after_index_end"]=const_end
+                df_multipl_correct.loc[t,"context_after_valid"]=False
+        #context_after=df_multipl_correct.loc[t, "context_after"]
+        else:
+            df_multipl_correct.loc[t,"context_after_index_beg"]=const_end
+            df_multipl_correct.loc[t,"context_after_index_end"]=const_end
+            print "blank", t
+    
+    
+    df_multipl_correct["context_valid"]=(df_multipl_correct["context_before_valid"]&df_multipl_correct["context_after_valid"])
+    
+    df_bad_context=df_multipl_correct[~df_multipl_correct["context_valid"]   ]
+    
+    df_bad_context.to_csv("bad_context.csv")
+
+
 
 #==============================================================================
-# Export duplicates
+# Export and correct duplicates
 #==============================================================================
+
+
 
 #figure out which entries are duplicate
 df_dup=data_orig[array_duplicate].copy()
@@ -319,9 +448,20 @@ df_dup["multiplicity"]=np.array( [0]*len(df_dup), dtype= int )
 df_dup["appearances"]=np.array( [" "]*len(df_dup), dtype= str )
 df_dup["allocated"]=np.array( [""]*len(df_dup), dtype= str )
 df_dup["allocated_iter2"]=np.array( [""]*len(df_dup), dtype= str )
+df_dup["repe"]=np.array( [0]*len(df_dup), dtype= int )
+df_dup["repe_index"]=np.array( [""]*len(df_dup), dtype= str )
+df_dup["usr_num_h"]=np.array( [0]*len(df_dup), dtype= int )
+df_dup["rep_index"]=np.array( [0]*len(df_dup), dtype= int )
+df_dup["corrected"]=np.array( [False]*len(df_dup), dtype= bool )
+
+df_dup["context_before"]= np.array( [" "]*len(df_dup), dtype=str)
+df_dup["context_after"]= np.array( [" "]*len(df_dup), dtype=str)
+
+df_dup["corrected_manual"]= np.array( [False]*len(df_dup), dtype= bool )
+df_dup["corrected_auto"]= np.array( [False]*len(df_dup), dtype= bool )
 
 count_dup=0
-import duplicate_handler
+
 
 print "Acquiring ID list with duplicates"
 
@@ -346,7 +486,7 @@ for t in range(len(ID_dup_array)):
 
 count_array=np.array([0]*len(ID_dup_array), dtype=int  )
 
-
+fix_paper=0
 k=-1
 
 for t in df_dup.index:
@@ -393,8 +533,95 @@ for t in df_dup.index:
                
                
         elif df_dup.loc[t,"type"]=="paper":
-            pass
-            print "paper"
+            userID=int(df_dup.loc[t,"Participant"])
+            
+            Part_text=int(df_dup.loc[t,"Part"])
+            
+            str_alloc_prev=df_dup.loc[t,"allocated"]
+            #num_prev=len(str_alloc_prev.split())
+            
+            tup=tuple([userID, type_str, Part_text, seltext])
+            ind_dict=dict_duplicates[tup]            
+            count_array[ind_dict]+=1
+            
+            num_prev=0
+            arr_usr_ser=(data_orig["Participant"]=="%d"%(userID)) & (data_orig["Part"]=="%d"%(Part_text))
+            arr_usr_np=np.array(arr_usr_ser, dtype=bool)
+            df_usr=data_orig[arr_usr_np].copy()
+            df_usr.loc[:,"repe_index"]=np.array( [-1]*len(df_usr) , dtype=int )
+            
+            # setup dataframes with repeated entries 
+            repe=sum(np.array( df_usr["Text"]==seltext ,dtype=bool  )) 
+            
+            row_highlight=df_usr[ ( df_usr["Text"]==seltext  )    ]
+            df_dup.loc[t,"repe"]=repe
+            df_dup.loc[t,"usr_num_h"]=len(df_usr)
+            df_repe=df_usr[ ( df_usr["Text"]==seltext  )   ].copy()
+            repe_list=df_repe.index.values
+            conta=0
+            for row_repe in repe_list:                
+                df_usr.loc[row_repe,"repe_index"]=conta
+                conta+=1
+            ls=df_usr.index.values[(df_usr.index.values < t)]
+            if (t>df_usr.index.values[0] ) :
+                prev_index=t-1 
+                pind=df_usr.loc[prev_index,"ind_end"]
+            else:
+                pind=0
+            if (t<df_usr.index.values[-1]) :
+                next_index=t+1 
+                nind=df_usr.loc[next_index,"ind_start"]
+            else:
+                nind=const_end              
+                
+            str_app=df_dup.loc[t,"appearances"]    
+            list_app=str_app.split()
+            list_cand=[]
+            for el_app in list_app:
+                el_i=int(el_app)
+                if ( el_i>pind) & (el_i<nind):
+                    list_cand.append(el_i)
+                    
+            if len(list_cand)==1:
+                print "Correction located for entry ", t, df_usr.loc[t,"ind_start"]
+                fix_paper+=1
+                raw_text=get_clean_text(data_orig.loc[t,"Text"])
+                df_dup.loc[t,"ind_start"]=list_cand[0]
+                df_dup.loc[t,"ind_end"]=list_cand[0]+len(raw_text)
+                
+                data_orig.loc[t,"ind_start"]=list_cand[0]
+                data_orig.loc[t,"ind_end"]=list_cand[0]+len(raw_text)
+                
+                df_dup.loc[t,"corrected_auto"]=True
+                
+                
+            else:
+                #did not find a unique match within the presented annotations  
+                df_dup.loc[t,"allocated"]="-2"
+#                context_bef=df_multipl_correct.loc[t,"context_before"]
+#                
+#                context_aft=df_multipl_correct.loc[t,"context_after"]
+#                
+#                lowbound=df_multipl_correct.loc[t,"context_before_index_end"]
+#                upbound=df_multipl_correct.loc[t,"context_after_index_beg"]
+#               
+#                for ind_middle_str in list_app:
+#                    ind_middle=int(ind_middle_str)
+#                    if (ind_middle > lowbound) and (ind_middle< upbound):                        
+#                        print "Manual fix match", ind_middle, t
+#                        raw_text=data_orig.loc[t,"Text"]
+#                        df_dup.loc[t,"ind_start"]=ind_middle
+#                        df_dup.loc[t,"ind_end"]=ind_middle+len(raw_text)
+#                        
+#                        data_orig.loc[t,"ind_start"]=ind_middle
+#                        data_orig.loc[t,"ind_end"]=ind_middle+len(raw_text)
+#                        df_dup.loc[t,"corrected"]=True
+#                        df_dup.loc[t,"allocated"]+="%d"%(ind_middle)
+#                
+#                if df_dup.loc[t,"corrected"]!=True:
+#                    df_dup.loc[t,"allocated"]="-2"
+
+# second pass for correcting problems
 
 visit_array=np.array( [0]*len(count_array)  , dtype=int)
 
@@ -457,6 +684,8 @@ for t in df_dup.index:
                     raw_text=data_orig.loc[sel_entry,"Text"]
                     data_orig.loc[sel_entry,"ind_end"]=index_corrected+len(raw_text)
                     df_dup.loc[t,"allocated_iter2"]="%d"%(index_corrected  )
+                    
+                    
                     count_realloc+=1
                 pass
                 print "Multiple appearance index for entry ", sel_entry, "for user ", userID 
@@ -464,7 +693,46 @@ for t in df_dup.index:
             else: 
                 pass
                 print "Entry has wrong number of appearances in text ", tup
+                
+                       
 
+        elif df_dup.loc[t,"type"]=="paper":
+            userID=int(df_dup.loc[t,"Participant"])            
+            Part_text=int(df_dup.loc[t,"Part"])            
+            str_alloc_prev=df_dup.loc[t,"allocated"]                        
+            tup=tuple([userID, type_str, Part_text, seltext])
+            ind_dict=dict_duplicates[tup]        
+           
+            if df_dup.loc[t,"allocated"]=="-2":            
+                context_bef=df_multipl_correct.loc[t,"context_before"]                
+                context_aft=df_multipl_correct.loc[t,"context_after"]                
+                lowbound=df_multipl_correct.loc[t,"context_before_index_end"]
+                upbound=df_multipl_correct.loc[t,"context_after_index_beg"]
+               
+                str_app=df_dup.loc[t,"appearances"]    
+                list_app=str_app.split()
+                
+                for ind_middle_str in list_app:
+                    ind_middle=int(ind_middle_str)
+                    if (ind_middle > lowbound) and (ind_middle< upbound):                        
+                        print "Manual fix match", ind_middle, t
+                        df_dup.loc[t,"allocated"]=" "
+                        raw_text=data_orig.loc[t,"Text"]
+                        df_dup.loc[t,"ind_start"]=ind_middle
+                        df_dup.loc[t,"ind_end"]=ind_middle+len(raw_text)
+                        
+                        data_orig.loc[t,"ind_start"]=ind_middle
+                        data_orig.loc[t,"ind_end"]=ind_middle+len(raw_text)
+                        df_dup.loc[t,"corrected"]=True
+                        df_dup.loc[t,"allocated"]+=" %d"%(ind_middle)
+                        df_dup.loc[t,"corrected_manual"]=True
+                if df_dup.loc[t,"corrected_manual"]!=True:
+                    df_dup.loc[t,"allocated"]="-2"
+        
+        
+        
+df_dup["corrected"]=(df_dup["corrected_manual"]==True) | (df_dup["corrected_auto"]==True)     
+        
 
 multiple_missalloc=(df_dup["allocated"]=="-2") &(df_dup["allocated_iter2"]==""  )
 single_missalloc=(df_dup["allocated"]=="-1")
@@ -472,24 +740,49 @@ total_missalloc= single_missalloc | multiple_missalloc
 bad_realloc=np.array( total_missalloc , dtype=bool)
 
 count_bad_realloc=sum(bad_realloc)
-
-
+count_bad_mul=sum(multiple_missalloc)
+count_bad_sin=sum(single_missalloc)
 
 
 
 
 df_dup.to_csv(file_multiplicity)
 
+
+
+
 arr_multip=np.array( df_dup["Text"], dtype=str)
 list_mult= list( set( list(arr_multip) ) )
 
 if count_dup>0:
-    motive="Entries with multiple intances detected. "
+    motive="Entries with multiple intances detected. A correction will be attempted. "
     write_error_duplicate(file_error_log,df_dup,motive,file_multiplicity)
 
 
 df_bad_dup=df_dup[bad_realloc].copy()
-df_bad_dup.to_csv( file_bad_multiplicity)
+
+
+
+df_bad_dup.to_csv( file_bad_multiplicity, index=True)
+
+if len(df_bad_dup)>0:
+    print "Logging error"
+    motive="Some multiple instances could not be corrected. %d problems."%( len(df_bad_dup ) )
+    write_error_duplicate(file_error_log,df_bad_dup,motive,file_bad_multiplicity)    
+elif len(df_bad_dup)==0:
+    print "Logging error and correction notification"
+    motive="Correction successfull. Fixed all multiplicity problems."
+    write_error_duplicate_corrected(file_error_log,df_bad_dup,motive,file_bad_multiplicity)    
+    
+
+array_bu=np.array( df_bad_dup["Participant"], dtype=int)
+list_users_review=  list( set( list( array_bu ) ) ) 
+list_users_review.sort()
+fid=open("user_list_review.txt","w")
+for u in range(len(list_users_review)):
+    fid.write("%d \t %d \n"%(u+1,list_users_review[u]) )
+fid.close()    
+
 # marking bad entries
 
 print "\n \n Reallocated ", count_realloc, "ambigous entries with multiple instances in the text."
@@ -505,7 +798,7 @@ print "Finished with duplicates.. for now"
 #==============================================================================
      
 
-df_blank=data_orig[array_blank]
+df_blank=data_orig[array_blank].copy()
 df_blank.to_csv(file_blank)    
 
 
