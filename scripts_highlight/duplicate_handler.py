@@ -60,7 +60,8 @@ def read_whole(filename):
         except IOError as e:
             print "I/O error({0}): {1}".format(e.errno, e.strerror)
             print "Error reading {0} ".format(file_inp)
-            raise
+            raise 
+            str_wh=[]
         return str_wh
 
 def get_lines(filename):
@@ -73,8 +74,8 @@ def get_lines(filename):
     except IOError as e:
         print "I/O error({0}): {1}".format(e.errno, e.strerror)
         print "Error reading {0} ".format(filename)
-        raise
-        quit()       
+        raise 
+        #quit()       
     return line_list
 
 
@@ -137,7 +138,9 @@ def do_recovery(part,ID):
  
     text=load_stored_file(file_paths,part,letter,ID)
     seltext='<hypothesis-highlight class="annotator-hl">'
-    a=inst_regex(seltext,text)
+    
+    
+    #a=inst_regex(seltext,text)
     
     return text
 
@@ -334,15 +337,17 @@ def get_text_with_annot(part,ID):
 
     initial_tag='<div id="content" class="container-fluid">'        
     text=do_recovery(part,ID)
-    index_ini=text.index(initial_tag)    
-    # get end tag position
-    end_tag=get_end_tag(part,ID)    
-    
-    
-    index_end=text.index(end_tag)
-    trim=text[index_ini:index_end]    
-    purged=text_purger(trim)    
-    text_annot=purged   
+    purged=""
+    if len(text)>0:
+        index_ini=text.index(initial_tag)    
+        # get end tag position
+        end_tag=get_end_tag(part,ID)    
+        
+        
+        index_end=text.index(end_tag)
+        trim=text[index_ini:index_end]    
+        purged=text_purger(trim)    
+        text_annot=purged   
 
     return purged
 
@@ -508,7 +513,7 @@ def settle_duplicate_web_multi(userID,Part_text,sel_text, num_sel, list_availabl
     
     array_requested=(retr_annot==sel_text)  
     if sum(array_requested)==0:
-        print "Error finding all expected annotations"
+        print "Error finding all expected annotations for multi case"
         return [-1]
 
  

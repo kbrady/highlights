@@ -434,6 +434,7 @@ if type_from_file=="paper":
 
 
 
+
 #==============================================================================
 # Export and correct duplicates
 #==============================================================================
@@ -518,7 +519,15 @@ for t in df_dup.index:
             count_array[ind_dict]+=1
             
             num_prev=0
-            correct_index=duplicate_handler.settle_duplicate_web(userID,Part_text,seltext, num_prev ,list_instances)
+            try :
+                correct_index=duplicate_handler.settle_duplicate_web(userID,Part_text,seltext, num_prev ,list_instances)
+            
+            except IOError:
+                print "Catching IOError"
+                fid_catch=open("catches_single.out","a")
+                fid_catch.write("Caught exception for %d \n"%(userID))
+                fid_catch.close()
+                correct_index=-1
             if correct_index>0:
                 str_alloc=df_dup.loc[t,"allocated"]+" "+"%d"%(correct_index)
                 df_dup.loc[t,"allocated"]=str_alloc                
@@ -663,7 +672,15 @@ for t in df_dup.index:
                 visit_array[ind_dict]+=1
                 str_appear=df_dup.loc[t,"appearances"]                
                 arr_appear=list(np.array( str_appear.split(), dtype=int) )
-                list_index=duplicate_handler.settle_duplicate_web_multi(userID,Part_text,seltext, num_count, arr_appear)
+                try:
+                    list_index=duplicate_handler.settle_duplicate_web_multi(userID,Part_text,seltext, num_count, arr_appear)
+                
+                except IOError:
+                    print "Catching IOError"
+                    fid_catch=open("catches_multiple.out","a")
+                    fid_catch.write("Caught exception for %d \n"%(userID))
+                    fid_catch.close()
+                    list_index=[-1]
                 err=-1
                 if err in list_index:                    
                     print "Cannot allocate entry. Will discard:", seltext, " for ", userID
@@ -684,7 +701,8 @@ for t in df_dup.index:
                     raw_text=data_orig.loc[sel_entry,"Text"]
                     data_orig.loc[sel_entry,"ind_end"]=index_corrected+len(raw_text)
                     df_dup.loc[t,"allocated_iter2"]="%d"%(index_corrected  )
-                    
+                    df_dup.loc[t,"corrected_auto"]=True
+                   
                     
                     count_realloc+=1
                 pass
@@ -703,29 +721,32 @@ for t in df_dup.index:
             tup=tuple([userID, type_str, Part_text, seltext])
             ind_dict=dict_duplicates[tup]        
            
-            if df_dup.loc[t,"allocated"]=="-2":            
-                context_bef=df_multipl_correct.loc[t,"context_before"]                
-                context_aft=df_multipl_correct.loc[t,"context_after"]                
-                lowbound=df_multipl_correct.loc[t,"context_before_index_end"]
-                upbound=df_multipl_correct.loc[t,"context_after_index_beg"]
-               
-                str_app=df_dup.loc[t,"appearances"]    
-                list_app=str_app.split()
-                
-                for ind_middle_str in list_app:
-                    ind_middle=int(ind_middle_str)
-                    if (ind_middle > lowbound) and (ind_middle< upbound):                        
-                        print "Manual fix match", ind_middle, t
-                        df_dup.loc[t,"allocated"]=" "
-                        raw_text=data_orig.loc[t,"Text"]
-                        df_dup.loc[t,"ind_start"]=ind_middle
-                        df_dup.loc[t,"ind_end"]=ind_middle+len(raw_text)
-                        
-                        data_orig.loc[t,"ind_start"]=ind_middle
-                        data_orig.loc[t,"ind_end"]=ind_middle+len(raw_text)
-                        df_dup.loc[t,"corrected"]=True
-                        df_dup.loc[t,"allocated"]+=" %d"%(ind_middle)
-                        df_dup.loc[t,"corrected_manual"]=True
+            if df_dup.loc[t,"allocated"]=="-2": 
+                pass
+                corrections_available=True
+                if corrections_available==True:                    
+                    context_bef=df_multipl_correct.loc[t,"context_before"]                
+                    context_aft=df_multipl_correct.loc[t,"context_after"]                
+                    lowbound=df_multipl_correct.loc[t,"context_before_index_end"]
+                    upbound=df_multipl_correct.loc[t,"context_after_index_beg"]
+                   
+                    str_app=df_dup.loc[t,"appearances"]    
+                    list_app=str_app.split()
+                    
+                    for ind_middle_str in list_app:
+                        ind_middle=int(ind_middle_str)
+                        if (ind_middle > lowbound) and (ind_middle< upbound):                        
+                            print "Manual fix match", ind_middle, t
+                            df_dup.loc[t,"allocated"]=" "
+                            raw_text=data_orig.loc[t,"Text"]
+                            df_dup.loc[t,"ind_start"]=ind_middle
+                            df_dup.loc[t,"ind_end"]=ind_middle+len(raw_text)
+                            
+                            data_orig.loc[t,"ind_start"]=ind_middle
+                            data_orig.loc[t,"ind_end"]=ind_middle+len(raw_text)
+                            df_dup.loc[t,"corrected"]=True
+                            df_dup.loc[t,"allocated"]+=" %d"%(ind_middle)
+                            df_dup.loc[t,"corrected_manual"]=True
                 if df_dup.loc[t,"corrected_manual"]!=True:
                     df_dup.loc[t,"allocated"]="-2"
         

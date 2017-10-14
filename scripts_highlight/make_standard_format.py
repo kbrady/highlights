@@ -511,7 +511,31 @@ for t in range(1, len( data_clean ) ):
         data_clean.loc[t,"1 to start"]=1
         old_entry=new_entry
 
+# =============================================================================
+# Add in column with indexes for every entry for each user
+# =============================================================================
+#
 
+#def user_list_frame(df):
+#    ls=list(np.array(  df["Participant"] ,dtype=int )  )    
+#    unique_list=list(set(ls))    
+#    unique_list.sort()
+#    return unique_list
+#
+##
+#data_clean["usr_entry_index"]=0
+##
+##  
+##
+###assign a number to each highlight
+##
+#unique_ID=user_list_frame(data_clean)    
+##
+#for ID in unique_ID:
+#    sel_part=(data_clean["Participant"]=="%d"%(ID))
+#    ln=len(data_clean.loc[sel_part, "usr_entry_index"])
+#   # data_clean.loc[sel_part,"usr_entry_index"]=range(1,ln+1)
+#
 
 #==============================================================================
 # Output corrected csv

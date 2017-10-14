@@ -15,6 +15,11 @@ cp /home/jorge/spyder_work/run_highlights.py ./
 cp /home/jorge/spyder_work/duplicate_handler.py ./
 
 
+cp /home/jorge/spyder_work/regenerate_digital_V2.py ./
+cp /home/jorge/spyder_work/import_investigation.py ./
+cp /home/jorge/spyder_work/transplant_corrections.py ./
+
+
 
 
 
