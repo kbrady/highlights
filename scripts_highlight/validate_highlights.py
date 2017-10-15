@@ -276,6 +276,72 @@ def load_corrections():
     return df_man_cor
 
 
+def load_correction_digital():
+    df_digital_correct=pd.read_csv("digital_corrections.csv", na_filter=False, dtype=str )
+    
+    
+    return df_digital_correct
+
+
+# =============================================================================
+#  Correction routines
+# =============================================================================
+
+
+def correction_digital_scheme(t,df_dup, data_orig):
+    index_corr_man=-1
+    index_corrected=-1
+    success_corr=False   
+    try:
+        userID=int(df_dup.loc[t,"Participant"])
+        entry_index=df_dup.loc[t,"usr_entry_index"]
+        df_digital_corr=load_correction_digital()
+        arr_corr_dig=(df_digital_corr["Participant"]=="%d"%(userID))&(df_digital_corr["usr_entry_index"]=="%s"%(entry_index)) 
+        df_corr_sel=df_digital_corr[arr_corr_dig]
+        
+        if len(df_corr_sel)==0:
+            return -1
+        
+        index_corr_man=int(df_corr_sel.loc[df_corr_sel.index[0],"manual_correction"])                        
+        
+        index_corrected=index_corr_man       
+        if index_corrected>=0:
+            arr_corr_man_dup=(df_dup["Participant"]=="%d"%(userID))&(df_dup["usr_entry_index"]=="%s"%(entry_index))
+            sel_entry=list(df_dup.index[arr_corr_man_dup])[0]   
+            seltext=data_orig.loc[sel_entry,"Text"]
+            data_orig.loc[sel_entry,"ind_start"]=index_corrected
+            raw_text=data_orig.loc[sel_entry,"Text"]
+            data_orig.loc[sel_entry,"ind_end"]=index_corrected+len(raw_text)
+            df_dup.loc[sel_entry,"allocated_iter2"]="%d"%(index_corrected  )
+            df_dup.loc[sel_entry,"corrected_manual"]=True
+            print "sel_entry", sel_entry, t, index_corrected
+
+        
+        success_corr=True
+        print index_corr_man
+    except IOError:
+        raise
+        print " io error", userID, t
+    except KeyError:
+        raise
+        print "key error", userID, t    
+    except ValueError:
+        raise
+        print "value error", userID, t
+
+   
+    if success_corr==True:     
+        pass
+       #print "\n\n\n\n Correction t= %d index= %d \n\n"%(t, index_corr_man )
+    else:
+        print "\n\n\n\n"
+        print "Cannot allocate entry. Will discard:", seltext, " for ", userID
+        return -1
+
+    return 0
+
+
+
 #==============================================================================
 # Validate highlights 
 #==============================================================================
@@ -663,17 +729,28 @@ for t in df_dup.index:
                     data_orig.loc[sel_entry,"ind_start"]=sel_entry
                     raw_text=data_orig.loc[sel_entry,"Text"]
                     data_orig.loc[sel_entry,"ind_end"]=sel_entry+len(raw_text)
+                    df_dup.loc[t,"corrected_auto"]=True
+
                     print "Reallocated the index for entry ", sel_entry, "for user ", userID 
                     count_realloc+=1
-                    
+                
+                else:
+                        res=correction_digital_scheme(t,df_dup, data_orig)
+                        fid_disc=open("discarded_temp.out","a")
+                        fid_disc.write("else_count >1 user=%d \t t=%d \t  text: %s \t %d\n"%(userID, t, test_text,res)   )
+                        fid_disc.close()
+                        
+                
             elif num_count>1:
                # print "Multiple highlights"
                 visit_num=visit_array[ind_dict]                
                 visit_array[ind_dict]+=1
                 str_appear=df_dup.loc[t,"appearances"]                
                 arr_appear=list(np.array( str_appear.split(), dtype=int) )
+               
                 try:
                     list_index=duplicate_handler.settle_duplicate_web_multi(userID,Part_text,seltext, num_count, arr_appear)
+                  
                 
                 except IOError:
                     print "Catching IOError"
@@ -682,9 +759,55 @@ for t in df_dup.index:
                     fid_catch.close()
                     list_index=[-1]
                 err=-1
-                if err in list_index:                    
-                    print "Cannot allocate entry. Will discard:", seltext, " for ", userID
-                    
+                if err in list_index:       
+                    #last chance fix manual  
+                    index_corr_man=-1
+                    index_corrected=-1
+                    success_corr=False
+                    try:
+                        entry_index=df_dup.loc[t,"usr_entry_index"]
+                        df_digital_corr=load_correction_digital()
+                        arr_corr_dig=(df_digital_corr["Participant"]=="%d"%(userID))&(df_digital_corr["usr_entry_index"]=="%s"%(entry_index)) 
+                        df_corr_sel=df_digital_corr[arr_corr_dig]
+                        
+                        if len(df_corr_sel)==0:
+                            raise CorrectionError("Cannot find correction in file ")
+                        
+                        index_corr_man=int(df_corr_sel.loc[df_corr_sel.index[0],"manual_correction"])                        
+                        
+                        index_corrected=index_corr_man       
+                        if index_corrected>=0:
+                            arr_corr_man_dup=(df_dup["Participant"]=="%d"%(userID))&(df_dup["usr_entry_index"]=="%s"%(entry_index))
+                            sel_entry=list(df_dup.index[arr_corr_man_dup])[0]                           
+                        
+                            test_text=data_orig.loc[sel_entry,"Text"]
+                            data_orig.loc[sel_entry,"ind_start"]=index_corrected
+                            raw_text=data_orig.loc[sel_entry,"Text"]
+                            data_orig.loc[sel_entry,"ind_end"]=index_corrected+len(raw_text)
+                            df_dup.loc[sel_entry,"allocated_iter2"]="%d"%(index_corrected  )
+                            df_dup.loc[sel_entry,"corrected_manual"]=True
+                                                    
+                        success_corr=True
+                        print index_corr_man
+                    except IOError:
+                        raise
+                        print " io error", userID, t
+                    except KeyError:
+                        raise
+                        print "key error", userID, t    
+                    except ValueError:
+                        raise
+                        print "value error", userID, t
+                    except CorrectionError:
+                        raise
+                   
+                    if success_corr==True:     
+                        pass
+                       #print "\n\n\n\n Correction t= %d index= %d \n\n"%(t, index_corr_man )
+                    else:
+                        
+                        print "Cannot allocate entry. Will discard:", seltext, " for ", userID
+                                        
                 else:
                    # print t, seltext," ",str_appear, list_index, " index_dict ", ind_dict , "\n"
                     index_corrected=list_index[visit_num]
@@ -692,7 +815,8 @@ for t in df_dup.index:
                     (data_orig["Text"]== df_dup.loc[t,"Text"]  )
                     
                     arr_sel=np.array(arr_sel, dtype=bool)
-               # print "NZ ", np.nonzero(arr_sel)                    
+ 
+                # print "NZ ", np.nonzero(arr_sel)                    
                
                     NZ_list=list( np.nonzero(arr_sel)[0] )                    
                     sel_entry=NZ_list[visit_num]
@@ -701,8 +825,7 @@ for t in df_dup.index:
                     raw_text=data_orig.loc[sel_entry,"Text"]
                     data_orig.loc[sel_entry,"ind_end"]=index_corrected+len(raw_text)
                     df_dup.loc[t,"allocated_iter2"]="%d"%(index_corrected  )
-                    df_dup.loc[t,"corrected_auto"]=True
-                   
+                    df_dup.loc[t,"corrected_auto"]=True                   
                     
                     count_realloc+=1
                 pass
@@ -756,8 +879,11 @@ df_dup["corrected"]=(df_dup["corrected_manual"]==True) | (df_dup["corrected_auto
         
 
 multiple_missalloc=(df_dup["allocated"]=="-2") &(df_dup["allocated_iter2"]==""  )
-single_missalloc=(df_dup["allocated"]=="-1")
-total_missalloc= single_missalloc | multiple_missalloc
+single_missalloc=(df_dup["allocated"]=="-1")&(df_dup["allocated_iter2"]==""  )
+
+array_not_corrected=np.logical_not( np.array( df_dup["corrected"],dtype=bool) )
+
+total_missalloc= single_missalloc | multiple_missalloc | array_not_corrected
 bad_realloc=np.array( total_missalloc , dtype=bool)
 
 count_bad_realloc=sum(bad_realloc)

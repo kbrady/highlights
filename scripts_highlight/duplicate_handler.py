@@ -509,9 +509,9 @@ def settle_duplicate_web_multi(userID,Part_text,sel_text, num_sel, list_availabl
     retr_annot=np.array( res_retrieved[1] , dtype=str)
     retr_word_index=np.array(res_retrieved[2], dtype=int)
     retr_text_index=np.array(res_retrieved[3], dtype=int)
-  
-    
+      
     array_requested=(retr_annot==sel_text)  
+  
     if sum(array_requested)==0:
         print "Error finding all expected annotations for multi case"
         return [-1]
@@ -546,7 +546,7 @@ def settle_duplicate_web_multi(userID,Part_text,sel_text, num_sel, list_availabl
         pass
         # print "Mismatch between allocated and expected annotations", "numsel ", num_sel, "len_list", len(global_list)
        # print [ elem for elem in global_list] 
-        return [-1]
+        return [-1]*num_sel
    
     return  global_list
 
